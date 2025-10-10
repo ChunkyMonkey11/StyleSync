@@ -18,3 +18,48 @@ First impelemtation:
 - Build a simple page that doesnt store the info anywhere. 
 - Just has a form that takes in whatever user inputs specified above
 
+1."Sync" Mechanics:
+When two users sync, do they see each other's feeds in real-time?
+    Yes: But in a sense of like a profile is created and now I can kinda click into their feed. This could be creative like mini islands like animal crossing, or a customizable closet that repersetns a persons feed.
+Is syncing mutual (both approve) or one-way following?
+    Mutual
+Can you have different levels (close friends vs casual follows)?
+    Not for now.
+
+
+2. Feed Content:
+What shows up in a friend's feed? Their:
+Recent browsing?
+    Yes but in a sense of every friend has their feed curated using the hooks at the start hence our login page. 
+
+Saved/favorited items?
+    Yes
+Actual purchases?
+    Yes
+Posts/reviews they make?
+Yes
+
+3. Privacy Controls:
+Can users control what's visible to synced friends?
+    Not for now
+Hide certain shops/categories?
+    No
+Private browsing mode?
+    What do you mean by this??
+
+4.Current State:
+You've built the onboarding - is that storing data to Supabase?
+    No after we disuss what info we should collect at onboarding and how we should create our intial user profiel we can do this.
+Do you have the "invite/sync" functionality yet?
+    No
+Is the feed system started or is that next?
+    No - First we want to create a good user profile and db system.
+
+
+5.Technical:
+Are you building this entirely within Shop's Mini SDK constraints?
+    Preffered this way. But open to wrtiing custom logic. 
+Supabase as your backend - any Shop API integrations needed?
+    Not sure
+Real-time updates or pull-to-refresh model?
+    Pull to refresh.

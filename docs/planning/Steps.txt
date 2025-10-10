@@ -1,0 +1,20 @@
+1. Lets work on the page that appears when a user first joins the mini.
+So our first time login page.
+I am looking to gather this information to create a user profile.
+
+User:
+    - Username : How people search for friends. (Unique)
+    - SyncId : Internal UUID that we use to track all users. (Can be used for future use or admin dashboard idk yet)
+    - Bio   : User Bio for their self
+    - Pfp : Just for places where PFP can be used
+    - Metadata :  Addtional info that the shop sdk will give us about the users.
+    - Interest : Take user interest: Note for form ("In the form similar to how in linkdin u can add skills that turn into bubbles make sure the form does the same")
+
+Try to see if it possible to encorporate:
+- useBuyerAttributes
+- useCurrentUser
+
+First impelemtation:
+- Build a simple page that doesnt store the info anywhere. 
+- Just has a form that takes in whatever user inputs specified above
+
