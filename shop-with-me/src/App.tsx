@@ -1,9 +1,8 @@
 import { useCurrentUser, useBuyerAttributes, useRecentProducts, useSavedProducts } from '@shopify/shop-minis-react'
 import { useState, useEffect } from 'react'
 import { useAuth } from './hooks/useAuth'
-import { supabase } from './lib/supabase'
 import { OnboardingForm, OnboardingFormData } from './components/OnboardingForm'
-import { UserProfile } from './types'
+import { createUserProfile, getUserProfileByUsername, type UserProfile } from './services/userService'
 
 type AppView = 'loading' | 'onboarding' | 'main'
 
@@ -38,35 +37,22 @@ export function App() {
       }
 
       try {
-        console.log('🔍 Checking for existing profile for user:', userId.substring(0, 8) + '...')
+        console.log('🔍 Checking for existing profile for shop_user_id:', userId.substring(0, 20) + '...')
         
-        // Check if profile exists in database with timeout
-        const { data, error } = await supabase
-          .from('user_profiles')
-          .select('*')
-          .eq('user_id', userId)
-          .single()
-
-        console.log('📊 Database response - data:', !!data, 'error:', error?.code || 'none')
+        // Check if profile exists in database using shop_user_id
+        const { data, error } = await getUserProfileByUsername(userId)
 
         if (error) {
-          if (error.code === 'PGRST116') {
-            // No profile found - show onboarding
-            console.log('📝 No profile found, showing onboarding')
-            setView('onboarding')
-          } else {
-            console.error('❌ Database error:', error)
-            // Show onboarding instead of error for network issues
-            console.log('🔄 Showing onboarding due to database error')
-            setView('onboarding')
-          }
+          // No profile found - show onboarding
+          console.log('📝 No profile found, showing onboarding')
+          setView('onboarding')
         } else if (data) {
           // Profile exists - load it
           console.log('✅ Profile found:', data.username)
           setUserProfile(data)
           setView('main')
         } else {
-          // No data and no error - show onboarding
+          // No data - show onboarding
           console.log('❓ No data returned, showing onboarding')
           setView('onboarding')
         }
@@ -84,22 +70,31 @@ export function App() {
   // Handle onboarding form completion
   const handleOnboardingComplete = async (formData: OnboardingFormData) => {
     console.log('💾 Creating profile with data:', formData)
+    setError(null)
 
-    // For now, skip database and just show the collected data
-    // Create a mock profile from form data
-    const mockProfile: UserProfile = {
-      user_id: formData.syncId,
-      username: formData.username,
-      display_name: formData.metadata.displayName || 'User',
-      profile_pic: formData.pfp,
-      bio: formData.bio,
-      created_at: new Date().toISOString(),
-      last_active: new Date().toISOString()
+    try {
+      // Call the edge function to create profile
+      const { data, error } = await createUserProfile(formData)
+
+      if (error) {
+        console.error('❌ Failed to create profile:', error)
+        setError(error.message)
+        throw new Error(error.message)
+      }
+
+      if (!data) {
+        throw new Error('No profile data returned')
+      }
+
+      console.log('✅ Profile created successfully!', data)
+      setUserProfile(data)
+      setView('main')
+    } catch (err) {
+      console.error('❌ Profile creation error:', err)
+      const errorMessage = err instanceof Error ? err.message : 'Failed to create profile'
+      setError(errorMessage)
+      // Error will be shown in the form, don't change view
     }
-
-    console.log('✅ Profile data collected successfully!')
-    setUserProfile(mockProfile)
-    setView('main')
   }
 
   // Loading state
@@ -177,7 +172,6 @@ export function App() {
   if (view === 'onboarding' && userId) {
     return (
       <OnboardingForm 
-        syncId={userId}
         onComplete={handleOnboardingComplete}
       />
     )
@@ -213,9 +207,9 @@ export function App() {
           </h2>
 
           <div style={{ display: 'flex', alignItems: 'center', marginBottom: '20px' }}>
-            {userProfile?.profile_pic && (
+            {userProfile?.pfp_url && (
               <img 
-                src={userProfile.profile_pic}
+                src={userProfile.pfp_url}
                 alt="Profile"
                 style={{
                   width: '80px',
@@ -228,10 +222,10 @@ export function App() {
             )}
             <div>
               <h3 style={{ fontSize: '20px', fontWeight: 'bold', marginBottom: '4px' }}>
-                {userProfile?.display_name}
-              </h3>
-              <p style={{ color: '#2563eb', fontSize: '16px', margin: 0 }}>
                 @{userProfile?.username}
+              </h3>
+              <p style={{ color: '#64748b', fontSize: '14px', margin: 0 }}>
+                Shop User
               </p>
             </div>
           </div>
@@ -262,7 +256,7 @@ export function App() {
             marginBottom: '16px'
           }}>
             <p style={{ fontSize: '14px', color: '#0369a1', margin: '0 0 8px 0' }}>
-              <strong>Your Hidden Reference ID:</strong>
+              <strong>Your Sync ID:</strong>
             </p>
             <p style={{ 
               fontSize: '12px', 
@@ -271,7 +265,7 @@ export function App() {
               wordBreak: 'break-all',
               margin: 0
             }}>
-              {userProfile?.user_id}
+              {userProfile?.sync_id}
             </p>
           </div>
         </div>
@@ -507,12 +501,12 @@ export function App() {
               }}>
                 {JSON.stringify({
                   username: userProfile?.username,
-                  syncId: userProfile?.user_id,
+                  syncId: userProfile?.sync_id,
                   bio: userProfile?.bio,
-                  profilePicture: userProfile?.profile_pic,
-                  interests: (window as any).onboardingInterests || [],
+                  profilePicture: userProfile?.pfp_url,
+                  shopUserId: userProfile?.shop_user_id,
                   metadata: {
-                    displayName: currentUser?.displayName,
+                    displayName: (currentUser as any)?.displayName,
                     email: (currentUser as any)?.email,
                     recentProductsCount: recentProducts?.length || 0,
                     savedProductsCount: savedProducts?.length || 0,

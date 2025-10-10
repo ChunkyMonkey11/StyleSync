@@ -1,49 +1,53 @@
 import { useState } from 'react'
-import { useCurrentUser, useBuyerAttributes, useRecentProducts, useSavedProducts } from '@shopify/shop-minis-react'
+import { useCurrentUser } from '@shopify/shop-minis-react'
 
 interface OnboardingFormProps {
-  syncId: string // The UUID we generate
   onComplete?: (formData: OnboardingFormData) => Promise<void>
 }
 
+/**
+ * Minimal data structure matching the users table
+ * Only collects what we can't get from Shop SDK
+ */
 export interface OnboardingFormData {
+  // User inputs
   username: string
-  syncId: string
-  bio: string
-  pfp: string
-  interests: string[]
-  metadata: {
-    displayName?: string
-    email?: string
-    buyerAttributes?: any
-    shopifyData?: any
-    recentProducts?: any
-    savedProducts?: any
-  }
+  bio: string | null
+  
+  // From Shop SDK (useCurrentUser)
+  shop_user_id: string
+  pfp_url: string | null
+  
+  // Auto-generated in DB
+  // sync_id: UUID (generated on insert)
+  // created_at: TIMESTAMPTZ
+  // updated_at: TIMESTAMPTZ
 }
 
-export function OnboardingForm({ syncId, onComplete }: OnboardingFormProps) {
+export function OnboardingForm({ onComplete }: OnboardingFormProps) {
   const { currentUser } = useCurrentUser()
-  const { buyerAttributes } = useBuyerAttributes()
-  const { products: recentProducts } = useRecentProducts()
-  const { products: savedProducts } = useSavedProducts()
 
-  // Form state
+  // Form state - minimal!
   const [username, setUsername] = useState('')
   const [bio, setBio] = useState('')
-  const [interests, setInterests] = useState<string[]>([])
-  const [currentInterest, setCurrentInterest] = useState('')
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  // Get profile picture from currentUser
-  const profilePicture = (currentUser as any)?.avatarImage?.url || ''
+  // Extract data from Shop SDK
+  const shopUserId = (currentUser as any)?.id || ''
+  const pfpUrl = (currentUser as any)?.avatarImage?.url || null
 
   // Validation
   const validateUsername = (value: string): string | null => {
+    if (!value) return 'Username is required'
     if (value.length < 3) return 'Username must be at least 3 characters'
     if (value.length > 20) return 'Username must be less than 20 characters'
     if (!/^[a-z0-9_]+$/.test(value)) return 'Only lowercase letters, numbers, and underscores'
+    return null
+  }
+
+  const validateBio = (value: string): string | null => {
+    if (value.length > 150) return 'Bio must be less than 150 characters'
     return null
   }
 
@@ -60,75 +64,63 @@ export function OnboardingForm({ syncId, onComplete }: OnboardingFormProps) {
     }
   }
 
-  // Interest bubble handling (LinkedIn-style)
-  const handleInterestKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' || e.key === ',') {
-      e.preventDefault()
-      addInterest()
-    } else if (e.key === 'Backspace' && !currentInterest && interests.length > 0) {
-      // Remove last interest if backspace on empty input
-      setInterests(interests.slice(0, -1))
+  const handleBioChange = (value: string) => {
+    setBio(value)
+    
+    const error = validateBio(value)
+    if (error) {
+      setErrors({ ...errors, bio: error })
+    } else {
+      const { bio, ...rest } = errors
+      setErrors(rest)
     }
-  }
-
-  const addInterest = () => {
-    const trimmed = currentInterest.trim()
-    if (trimmed && !interests.includes(trimmed) && interests.length < 10) {
-      setInterests([...interests, trimmed])
-      setCurrentInterest('')
-    }
-  }
-
-  const removeInterest = (interestToRemove: string) => {
-    setInterests(interests.filter(i => i !== interestToRemove))
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    // Validate
+    // Validate required fields
     const usernameError = validateUsername(username)
-    if (usernameError) {
-      setErrors({ ...errors, username: usernameError })
+    const bioError = validateBio(bio)
+    
+    if (usernameError || bioError) {
+      setErrors({
+        ...(usernameError && { username: usernameError }),
+        ...(bioError && { bio: bioError }),
+      })
+      return
+    }
+    
+    // Check if we have Shop user ID
+    if (!shopUserId) {
+      setErrors({ form: 'Unable to get Shop user information. Please try again.' })
       return
     }
 
-    if (bio.length > 200) {
-      setErrors({ ...errors, bio: 'Bio must be less than 200 characters' })
-      return
-    }
-
-    // Prepare form data
+    // Prepare minimal form data - only what goes in users table
     const formData: OnboardingFormData = {
       username,
-      syncId,
-      bio,
-      pfp: profilePicture,
-      interests,
-      metadata: {
-        displayName: currentUser?.displayName ?? undefined,
-        email: (currentUser as any)?.email ?? undefined,
-        buyerAttributes: buyerAttributes,
-        shopifyData: currentUser,
-        recentProducts: recentProducts,
-        savedProducts: savedProducts
-      }
+      bio: bio.trim() || null, // null if empty
+      shop_user_id: shopUserId,
+      pfp_url: pfpUrl,
     }
 
-    console.log('📋 Onboarding Form Data:', formData)
+    console.log('📋 Creating user profile:', formData)
     
-    // Store interests globally for display
-    ;(window as any).onboardingInterests = interests
+    setIsSubmitting(true)
     
-    if (onComplete) {
-      setIsSubmitting(true)
-      try {
+    try {
+      if (onComplete) {
         await onComplete(formData)
-      } catch (err) {
-        console.error('❌ Submission error:', err)
-        setErrors({ ...errors, submit: err instanceof Error ? err.message : 'Failed to complete setup' })
-        setIsSubmitting(false)
+      } else {
+        // No callback provided - just log for testing
+        console.log('✅ Profile data ready (no handler attached):', formData)
       }
+    } catch (err) {
+      console.error('❌ Submission error:', err)
+      setErrors({ form: err instanceof Error ? err.message : 'Failed to create profile. Please try again.' })
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
@@ -168,9 +160,9 @@ export function OnboardingForm({ syncId, onComplete }: OnboardingFormProps) {
         }}>
           {/* Profile Picture */}
           <div style={{ textAlign: 'center', marginBottom: '24px' }}>
-            {profilePicture ? (
+            {pfpUrl ? (
               <img 
-                src={profilePicture}
+                src={pfpUrl}
                 alt="Profile"
                 style={{
                   width: '100px',
@@ -200,27 +192,7 @@ export function OnboardingForm({ syncId, onComplete }: OnboardingFormProps) {
               fontSize: '14px', 
               color: '#64748b' 
             }}>
-              {currentUser?.displayName || 'Your Profile'}
-            </p>
-          </div>
-
-          {/* SyncId Display */}
-          <div style={{ 
-            backgroundColor: '#f1f5f9', 
-            padding: '12px', 
-            borderRadius: '8px',
-            marginBottom: '24px'
-          }}>
-            <p style={{ fontSize: '12px', color: '#64748b', marginBottom: '4px' }}>
-              <strong>Your SyncId:</strong>
-            </p>
-            <p style={{ 
-              fontSize: '11px', 
-              fontFamily: 'monospace', 
-              color: '#475569',
-              wordBreak: 'break-all'
-            }}>
-              {syncId}
+              {(currentUser as any)?.displayName || 'Your Profile'}
             </p>
           </div>
 
@@ -277,7 +249,7 @@ export function OnboardingForm({ syncId, onComplete }: OnboardingFormProps) {
           </div>
 
           {/* Bio Input */}
-          <div style={{ marginBottom: '20px' }}>
+          <div style={{ marginBottom: '24px' }}>
             <label style={{ 
               display: 'block', 
               marginBottom: '8px', 
@@ -285,13 +257,14 @@ export function OnboardingForm({ syncId, onComplete }: OnboardingFormProps) {
               fontSize: '14px',
               color: '#1e293b'
             }}>
-              Bio
+              Bio <span style={{ color: '#64748b', fontWeight: '400' }}>(optional)</span>
             </label>
             <textarea
               value={bio}
-              onChange={(e) => setBio(e.target.value)}
+              onChange={(e) => handleBioChange(e.target.value)}
               placeholder="Tell us about yourself..."
               rows={3}
+              maxLength={150}
               style={{
                 width: '100%',
                 padding: '12px',
@@ -313,261 +286,29 @@ export function OnboardingForm({ syncId, onComplete }: OnboardingFormProps) {
               </p>
             )}
             <p style={{ marginTop: '6px', fontSize: '12px', color: '#64748b' }}>
-              {bio.length}/200 characters
+              {bio.length}/150 characters
             </p>
           </div>
 
-          {/* Interests Input (LinkedIn-style bubbles) */}
-          <div style={{ marginBottom: '24px' }}>
-            <label style={{ 
-              display: 'block', 
-              marginBottom: '8px', 
-              fontWeight: '600', 
-              fontSize: '14px',
-              color: '#1e293b'
-            }}>
-              Interests
-            </label>
-            <p style={{ fontSize: '12px', color: '#64748b', marginBottom: '8px' }}>
-              Add interests that define your style (press Enter or comma to add)
-            </p>
-            
-            {/* Interest bubbles display */}
-            <div style={{
-              minHeight: '60px',
-              padding: '10px',
-              border: '2px solid #e2e8f0',
-              borderRadius: '10px',
-              display: 'flex',
-              flexWrap: 'wrap',
-              gap: '8px',
-              alignItems: 'center',
-              backgroundColor: '#fafafa'
-            }}>
-              {interests.map((interest, index) => (
-                <span
-                  key={index}
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    padding: '6px 12px',
-                    backgroundColor: '#667eea',
-                    color: 'white',
-                    borderRadius: '20px',
-                    fontSize: '14px',
-                    fontWeight: '500'
-                  }}
-                >
-                  {interest}
-                  <button
-                    type="button"
-                    onClick={() => removeInterest(interest)}
-                    style={{
-                      background: 'rgba(255, 255, 255, 0.3)',
-                      border: 'none',
-                      borderRadius: '50%',
-                      width: '18px',
-                      height: '18px',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      color: 'white',
-                      fontSize: '12px',
-                      fontWeight: 'bold',
-                      padding: 0
-                    }}
-                  >
-                    ×
-                  </button>
-                </span>
-              ))}
-              
-              {/* Input for adding new interests */}
-              {interests.length < 10 && (
-                <input
-                  type="text"
-                  value={currentInterest}
-                  onChange={(e) => setCurrentInterest(e.target.value)}
-                  onKeyDown={handleInterestKeyDown}
-                  onBlur={addInterest}
-                  placeholder={interests.length === 0 ? "Fashion, Tech, Sports..." : "Add more..."}
-                  style={{
-                    flex: '1',
-                    minWidth: '150px',
-                    border: 'none',
-                    outline: 'none',
-                    fontSize: '14px',
-                    padding: '6px',
-                    backgroundColor: 'transparent'
-                  }}
-                />
-              )}
-            </div>
-            <p style={{ marginTop: '6px', fontSize: '12px', color: '#64748b' }}>
-              {interests.length}/10 interests added
-            </p>
-          </div>
-
-          {/* Shop SDK Data Preview */}
+          {/* Info box */}
           <div style={{ 
-            backgroundColor: '#fefce8', 
-            border: '1px solid #fde047',
+            backgroundColor: '#eff6ff', 
+            border: '1px solid #93c5fd',
             padding: '16px', 
             borderRadius: '10px',
-            marginBottom: '20px'
+            marginBottom: '24px'
           }}>
             <p style={{ 
               fontSize: '13px', 
-              fontWeight: '600', 
-              color: '#854d0e',
-              marginBottom: '12px'
+              color: '#1e3a8a',
+              margin: 0
             }}>
-              📊 We're collecting your shop data to personalize your feed:
+              💡 <strong>Quick setup!</strong> You can build your profile as you explore and connect with friends.
             </p>
-            <ul style={{ 
-              margin: 0, 
-              paddingLeft: '20px',
-              fontSize: '12px',
-              color: '#a16207'
-            }}>
-              <li>Recent Products: {recentProducts?.length || 0} items</li>
-              <li>Saved Products: {savedProducts?.length || 0} items</li>
-              <li>Buyer Attributes: {buyerAttributes ? 'Available' : 'Not available'}</li>
-              <li>Profile Data: {currentUser ? 'Available' : 'Loading...'}</li>
-            </ul>
           </div>
 
-          {/* Detailed Metadata Display (collapsible) */}
-          <details style={{ marginBottom: '20px' }}>
-            <summary style={{ 
-              cursor: 'pointer', 
-              fontSize: '13px', 
-              color: '#64748b',
-              marginBottom: '8px',
-              fontWeight: '600'
-            }}>
-              🔍 View Detailed SDK Data (Advanced)
-            </summary>
-            
-            <div style={{ marginTop: '12px' }}>
-              {/* Recent Products */}
-              {recentProducts && (
-                <details style={{ marginBottom: '12px' }}>
-                  <summary style={{ 
-                    cursor: 'pointer', 
-                    fontSize: '12px', 
-                    color: '#4b5563',
-                    padding: '8px',
-                    backgroundColor: '#f9fafb',
-                    borderRadius: '6px'
-                  }}>
-                    Recent Products ({recentProducts.length})
-                  </summary>
-                  <pre style={{
-                    fontSize: '11px',
-                    backgroundColor: '#f1f5f9',
-                    padding: '12px',
-                    borderRadius: '8px',
-                    overflow: 'auto',
-                    maxHeight: '150px',
-                    color: '#475569',
-                    marginTop: '8px'
-                  }}>
-                    {JSON.stringify(recentProducts, null, 2)}
-                  </pre>
-                </details>
-              )}
-
-              {/* Saved Products */}
-              {savedProducts && (
-                <details style={{ marginBottom: '12px' }}>
-                  <summary style={{ 
-                    cursor: 'pointer', 
-                    fontSize: '12px', 
-                    color: '#4b5563',
-                    padding: '8px',
-                    backgroundColor: '#f9fafb',
-                    borderRadius: '6px'
-                  }}>
-                    Saved Products ({savedProducts.length})
-                  </summary>
-                  <pre style={{
-                    fontSize: '11px',
-                    backgroundColor: '#f1f5f9',
-                    padding: '12px',
-                    borderRadius: '8px',
-                    overflow: 'auto',
-                    maxHeight: '150px',
-                    color: '#475569',
-                    marginTop: '8px'
-                  }}>
-                    {JSON.stringify(savedProducts, null, 2)}
-                  </pre>
-                </details>
-              )}
-
-              {/* Buyer Attributes */}
-              {buyerAttributes && (
-                <details style={{ marginBottom: '12px' }}>
-                  <summary style={{ 
-                    cursor: 'pointer', 
-                    fontSize: '12px', 
-                    color: '#4b5563',
-                    padding: '8px',
-                    backgroundColor: '#f9fafb',
-                    borderRadius: '6px'
-                  }}>
-                    Buyer Attributes
-                  </summary>
-                  <pre style={{
-                    fontSize: '11px',
-                    backgroundColor: '#f1f5f9',
-                    padding: '12px',
-                    borderRadius: '8px',
-                    overflow: 'auto',
-                    maxHeight: '150px',
-                    color: '#475569',
-                    marginTop: '8px'
-                  }}>
-                    {JSON.stringify(buyerAttributes, null, 2)}
-                  </pre>
-                </details>
-              )}
-
-              {/* Current User */}
-              {currentUser && (
-                <details>
-                  <summary style={{ 
-                    cursor: 'pointer', 
-                    fontSize: '12px', 
-                    color: '#4b5563',
-                    padding: '8px',
-                    backgroundColor: '#f9fafb',
-                    borderRadius: '6px'
-                  }}>
-                    Current User Data
-                  </summary>
-                  <pre style={{
-                    fontSize: '11px',
-                    backgroundColor: '#f1f5f9',
-                    padding: '12px',
-                    borderRadius: '8px',
-                    overflow: 'auto',
-                    maxHeight: '150px',
-                    color: '#475569',
-                    marginTop: '8px'
-                  }}>
-                    {JSON.stringify(currentUser, null, 2)}
-                  </pre>
-                </details>
-              )}
-            </div>
-          </details>
-
           {/* Error Display */}
-          {errors.submit && (
+          {errors.form && (
             <div style={{
               backgroundColor: '#fee2e2',
               border: '1px solid #ef4444',
@@ -576,7 +317,7 @@ export function OnboardingForm({ syncId, onComplete }: OnboardingFormProps) {
               marginBottom: '16px'
             }}>
               <p style={{ color: '#dc2626', fontSize: '14px', margin: 0 }}>
-                ❌ {errors.submit}
+                ❌ {errors.form}
               </p>
             </div>
           )}

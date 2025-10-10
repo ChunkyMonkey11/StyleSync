@@ -253,6 +253,33 @@ User:
 **Decision:** All synced friends see full feed activity  
 **Rationale:** Simplifies MVP; can add granular controls in future phases
 
+### Decision 4: Minimal Data Storage at Onboarding
+**Date:** Oct 10, 2025  
+**Decision:** Store only user-declared stable data at onboarding. Query Shop SDK dynamically for behavioral data.  
+**Rationale:**
+- Shop SDK data (recent/saved products) changes frequently - better to query fresh
+- Reduces storage costs and complexity
+- Faster onboarding experience (only username + bio + pfp)
+- Aligns with "island building" concept of progressive profile growth
+- Respects Shop as source of truth for shopping behavior
+- Users build their profile organically through app usage
+
+**Store at onboarding:**
+- username (required)
+- bio (optional, max 150 chars)
+- pfp_url (from Shop SDK)
+- shop_user_id (from Shop SDK)
+
+**Query dynamically when needed:**
+- Recent products (`useRecentProducts()`)
+- Saved products (`useSavedProducts()`)
+- Buyer attributes (`useBuyerAttributes()`)
+
+**Track over time (future):**
+- User activity within our app
+- Product interactions
+- Posts and engagement
+
 ---
 
 ## 🎯 Success Metrics (TBD)
