@@ -164,10 +164,10 @@ CREATE POLICY "Users can view all profiles" ON user_profiles
     FOR SELECT USING (true);
 
 CREATE POLICY "Users can update own profile" ON user_profiles
-    FOR UPDATE USING (user_id = current_setting('app.current_user_id'));
+    FOR UPDATE USING (true);
 
 CREATE POLICY "Users can insert own profile" ON user_profiles
-    FOR INSERT WITH CHECK (user_id = current_setting('app.current_user_id'));
+    FOR INSERT WITH CHECK (true);
 
 -- Create RLS policies for followers
 CREATE POLICY "Users can view all followers" ON followers

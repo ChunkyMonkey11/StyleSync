@@ -1,124 +1,124 @@
-import { useCurrentUser, useSecureStorage, useGenerateUserToken } from '@shopify/shop-minis-react'
-import { useCallback, useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
+import { useSecureStorage } from '@shopify/shop-minis-react'
+import { AuthData } from '../types'
 
-// Your Supabase project URL
-const AUTH_API = 'https://aedyzminlpeiyhhyuefc.supabase.co/functions/v1/auth'
+const AUTH_STORAGE_KEY = 'stylesync_auth'
 
-interface AuthData {
-  token: string
-  expiresAt: number
-  publicId: string
-  userState: string
+// Generate a UUID v4
+function generateUUID(): string {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    const r = Math.random() * 16 | 0
+    const v = c == 'x' ? r : (r & 0x3 | 0x8)
+    return v.toString(16)
+  })
 }
 
 export function useAuth() {
-  const { currentUser } = useCurrentUser()
-  const { getSecret, setSecret, removeSecret } = useSecureStorage()
-  const { generateUserToken } = useGenerateUserToken()
+  const { getSecret, setSecret } = useSecureStorage()
   const [authData, setAuthData] = useState<AuthData | null>(null)
-  const [isLoading, setIsLoading] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  // Load stored auth data on mount
+  // Initialize or load existing auth
   useEffect(() => {
-    async function loadAuth() {
+    async function createNewUser() {
       try {
-        const stored = await getSecret()
-        if (stored) {
-          const data: AuthData = JSON.parse(stored)
-          // Check if still valid (with 1 day buffer)
-          if (data.expiresAt > Date.now() + 86400000) {
+        const newUserId = generateUUID()
+        const newAuthData: AuthData = {
+          userId: newUserId,
+          createdAt: new Date().toISOString()
+        }
+        
+        console.log('✨ Created new user ID:', newUserId.substring(0, 8) + '...')
+        
+        // Save to secure storage
+        await setSecret({ 
+          key: AUTH_STORAGE_KEY, 
+          value: JSON.stringify(newAuthData) 
+        })
+        
+        console.log('💾 Saved new user to secure storage')
+        setAuthData(newAuthData)
+        return newAuthData
+      } catch (err) {
+        console.error('❌ Error creating new user:', err)
+        throw err
+      }
+    }
+
+    async function initAuth() {
+      try {
+        console.log('🔐 Initializing auth...')
+        
+        // Try to load existing auth data
+        const stored = await getSecret({ key: AUTH_STORAGE_KEY })
+        console.log('🔑 Secure storage result:', stored ? 'found' : 'not found', 'type:', typeof stored)
+        
+        if (stored && typeof stored === 'string') {
+          try {
+            const data: AuthData = JSON.parse(stored)
+            console.log('✅ Loaded existing user ID:', data.userId.substring(0, 8) + '...')
             setAuthData(data)
-            console.log('✅ Loaded valid auth data:', data.publicId)
-          } else {
-            await removeSecret() // Clear expired token
-            console.log('⏰ Auth data expired, will refresh')
+          } catch (parseError) {
+            console.error('❌ Failed to parse auth data, creating new user...', parseError)
+            await createNewUser()
           }
+        } else {
+          // No existing user, create new
+          console.log('👤 No existing user, creating new...')
+          await createNewUser()
         }
       } catch (error) {
-        console.error('❌ Failed to load auth data:', error)
+        console.error('❌ Auth initialization error:', error)
+        setError(error instanceof Error ? error.message : 'Failed to initialize auth')
+        // Set loading to false even on error
+      } finally {
+        console.log('✅ Auth initialization complete, isLoading set to false')
+        setIsLoading(false)
       }
     }
-    loadAuth()
-  }, [getSecret, removeSecret])
 
-  // Get or refresh JWT token
-  const getValidToken = useCallback(async (): Promise<AuthData> => {
-    // Check if current token is still valid
-    if (authData && authData.expiresAt > Date.now() + 86400000) {
-      return authData
-    }
+    initAuth()
+  }, [getSecret, setSecret])
 
-    // Get new token
-    setIsLoading(true)
-    setError(null)
-    
+  // Create a new user with UUID (exposed for manual use if needed)
+  const createNewUser = useCallback(async () => {
     try {
-      console.log('🔐 Starting authentication...')
-      
-      // Check if we have a current user
-      if (!currentUser) {
-        throw new Error('No current user available - please ensure you are signed in to Shopify')
+      const newUserId = generateUUID()
+      const newAuthData: AuthData = {
+        userId: newUserId,
+        createdAt: new Date().toISOString()
       }
       
-      console.log('👤 Current user:', currentUser)
+      console.log('✨ Created new user ID:', newUserId.substring(0, 8) + '...')
       
-      // Generate real Shopify user token
-      const shopifyToken = await generateUserToken()
-      console.log('🔐 Generated Shopify token:', shopifyToken)
-      
-      // Exchange token with our auth service
-      const response = await fetch(AUTH_API, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${shopifyToken}`
-        }
+      // Save to secure storage
+      await setSecret({ 
+        key: AUTH_STORAGE_KEY, 
+        value: JSON.stringify(newAuthData) 
       })
       
-      if (!response.ok) {
-        const errorText = await response.text()
-        throw new Error(`Auth service error: ${response.status} ${errorText}`)
-      }
-      
-      const authResponse = await response.json()
-      console.log('✅ Auth service response:', authResponse)
-      
-      // Store securely
-      const newAuthData: AuthData = {
-        token: authResponse.token,
-        expiresAt: Date.now() + (authResponse.expiresIn * 1000),
-        publicId: authResponse.publicId,
-        userState: authResponse.userState
-      }
-      await setSecret({ value: JSON.stringify(newAuthData) })
-      
+      console.log('💾 Saved new user to secure storage')
       setAuthData(newAuthData)
       return newAuthData
-      
-    } catch (error) {
-      console.error('❌ Authentication error:', error)
-      const errorMessage = error instanceof Error ? error.message : 'Authentication failed'
-      setError(errorMessage)
-      throw error
-    } finally {
-      setIsLoading(false)
+    } catch (err) {
+      console.error('❌ Error creating new user:', err)
+      throw err
     }
-  }, [authData, currentUser, setSecret])
+  }, [setSecret])
 
-  // Clear authentication
-  const clearAuth = useCallback(async () => {
-    await removeSecret()
-    setAuthData(null)
-    setError(null)
-  }, [removeSecret])
+  // Get the current user ID
+  const getUserId = useCallback(() => {
+    return authData?.userId || null
+  }, [authData])
 
-  return { 
-    getValidToken, 
-    clearAuth, 
-    isLoading, 
-    isAuthenticated: !!authData,
+  return {
+    userId: authData?.userId || null,
     authData,
-    error
+    isLoading,
+    error,
+    getUserId
   }
 }
+
+

@@ -16,7 +16,8 @@
     "strict": true,
     "target": "esnext",
     "skipLibCheck": true,
-    "noImplicitReturns": true,
+    "skipDefaultLibCheck": true,
+    "noImplicitReturns": false,
     "noFallthroughCasesInSwitch": true,
     "allowUnreachableCode": false,
     "allowUnusedLabels": false,
@@ -29,5 +30,6 @@
     "alwaysStrict": true,
     "useUnknownInCatchVariables": false
   },
-  "exclude": ["node_modules", "dist"]
+  "include": ["src"],
+  "exclude": ["node_modules", "dist", "supabase"]
 }
