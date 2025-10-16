@@ -14,12 +14,12 @@ export interface OnboardingFormData {
   username: string
   bio: string | null
   
-  // From Shop SDK (useCurrentUser)
-  shop_user_id: string
-  pfp_url: string | null
+  // From Shop SDK (useCurrentUser) - all optional since Shop SDK doesn't provide stable IDs
+  display_name?: string | null
+  pfp_url?: string | null
   
   // Auto-generated in DB
-  // sync_id: UUID (generated on insert)
+  // sync_id: UUID (generated on insert, our primary identifier)
   // created_at: TIMESTAMPTZ
   // updated_at: TIMESTAMPTZ
 }
@@ -32,9 +32,10 @@ export function OnboardingForm({ onComplete }: OnboardingFormProps) {
   const [bio, setBio] = useState('')
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [debugInfo, setDebugInfo] = useState<string>('')
 
-  // Extract data from Shop SDK
-  const shopUserId = (currentUser as any)?.id || ''
+  // Extract data from Shop SDK (all optional now)
+  const displayName = (currentUser as any)?.displayName || null
   const pfpUrl = (currentUser as any)?.avatarImage?.url || null
 
   // Validation
@@ -90,35 +91,35 @@ export function OnboardingForm({ onComplete }: OnboardingFormProps) {
       })
       return
     }
-    
-    // Check if we have Shop user ID
-    if (!shopUserId) {
-      setErrors({ form: 'Unable to get Shop user information. Please try again.' })
-      return
-    }
 
     // Prepare minimal form data - only what goes in users table
     const formData: OnboardingFormData = {
       username,
       bio: bio.trim() || null, // null if empty
-      shop_user_id: shopUserId,
+      display_name: displayName,
       pfp_url: pfpUrl,
     }
 
     console.log('📋 Creating user profile:', formData)
+    setDebugInfo('📤 Calling create-profile edge function...')
     
     setIsSubmitting(true)
     
     try {
       if (onComplete) {
+        setDebugInfo('📤 Edge function call started...')
         await onComplete(formData)
+        setDebugInfo('✅ Profile created successfully!')
       } else {
         // No callback provided - just log for testing
         console.log('✅ Profile data ready (no handler attached):', formData)
+        setDebugInfo('✅ Profile data ready (no handler attached)')
       }
     } catch (err) {
       console.error('❌ Submission error:', err)
-      setErrors({ form: err instanceof Error ? err.message : 'Failed to create profile. Please try again.' })
+      const errorMessage = err instanceof Error ? err.message : 'Failed to create profile. Please try again.'
+      setDebugInfo(`❌ Error: ${errorMessage}`)
+      setErrors({ form: errorMessage })
     } finally {
       setIsSubmitting(false)
     }
@@ -134,6 +135,71 @@ export function OnboardingForm({ onComplete }: OnboardingFormProps) {
       justifyContent: 'center'
     }}>
       <div style={{ maxWidth: '500px', margin: '0 auto', width: '100%' }}>
+        {/* DEBUG PANEL - Onboarding */}
+        <div style={{ 
+          backgroundColor: '#1e293b',
+          color: '#e2e8f0',
+          padding: '16px',
+          borderRadius: '8px',
+          marginBottom: '20px',
+          fontFamily: 'monospace',
+          fontSize: '12px',
+          maxHeight: '300px',
+          overflow: 'auto'
+        }}>
+          <div style={{ fontWeight: 'bold', marginBottom: '12px', color: '#fbbf24' }}>
+            🔍 DEBUG: Onboarding Environment
+          </div>
+          
+          <div style={{ marginBottom: '8px' }}>
+            <strong style={{ color: '#60a5fa' }}>Shop SDK Data:</strong>
+          </div>
+          <div style={{ marginLeft: '12px', marginBottom: '4px' }}>
+            currentUser: {currentUser ? '✅ Available' : '❌ null/undefined'}
+          </div>
+          <div style={{ marginLeft: '12px', marginBottom: '4px' }}>
+            displayName: {displayName || '(empty)'}
+          </div>
+          <div style={{ marginLeft: '12px', marginBottom: '8px' }}>
+            pfpUrl: {pfpUrl ? '✅ Available' : '❌ null/undefined'}
+          </div>
+
+          <div style={{ marginBottom: '8px' }}>
+            <strong style={{ color: '#60a5fa' }}>Form State:</strong>
+          </div>
+          <div style={{ marginLeft: '12px', marginBottom: '4px' }}>
+            Username: "{username}" ({username.length} chars)
+          </div>
+          <div style={{ marginLeft: '12px', marginBottom: '4px' }}>
+            Bio: "{bio}" ({bio.length} chars)
+          </div>
+          <div style={{ marginLeft: '12px', marginBottom: '4px' }}>
+            Errors: {Object.keys(errors).length > 0 ? Object.keys(errors).join(', ') : 'None'}
+          </div>
+          <div style={{ marginLeft: '12px', marginBottom: '4px' }}>
+            Submitting: {isSubmitting ? '⏳ Yes' : '✅ No'}
+          </div>
+
+          <div style={{ marginBottom: '8px' }}>
+            <strong style={{ color: '#60a5fa' }}>Validation:</strong>
+          </div>
+          <div style={{ marginLeft: '12px', marginBottom: '4px' }}>
+            Username Valid: {username.length >= 3 && !errors.username ? '✅' : '❌'}
+          </div>
+          <div style={{ marginLeft: '12px', marginBottom: '4px' }}>
+            Bio Valid: {!errors.bio ? '✅' : '❌'}
+          </div>
+          <div style={{ marginLeft: '12px', marginBottom: '4px' }}>
+            Can Submit: {username.length >= 3 && !errors.username && !isSubmitting ? '✅' : '❌'}
+          </div>
+
+          {debugInfo && (
+            <div style={{ marginTop: '8px', color: debugInfo.includes('❌') ? '#ef4444' : debugInfo.includes('✅') ? '#10b981' : '#60a5fa' }}>
+              <strong>Edge Function:</strong> {debugInfo}
+            </div>
+          )}
+        </div>
+
         {/* Header */}
         <div style={{ textAlign: 'center', marginBottom: '30px' }}>
           <h1 style={{ 
@@ -321,6 +387,45 @@ export function OnboardingForm({ onComplete }: OnboardingFormProps) {
               </p>
             </div>
           )}
+
+          {/* Test Edge Function Button */}
+          <button
+            type="button"
+            onClick={async () => {
+              setDebugInfo('🧪 Testing edge function connection...')
+              try {
+                const testData = {
+                  username: 'testuser123',
+                  bio: 'Test bio',
+                  display_name: displayName,
+                  pfp_url: pfpUrl
+                }
+                setDebugInfo('📤 Sending test request...')
+                if (onComplete) {
+                  await onComplete(testData)
+                  setDebugInfo('✅ Test successful!')
+                } else {
+                  setDebugInfo('⚠️ No onComplete handler')
+                }
+              } catch (err) {
+                setDebugInfo(`❌ Test failed: ${err instanceof Error ? err.message : 'Unknown error'}`)
+              }
+            }}
+            style={{
+              width: '100%',
+              padding: '12px',
+              fontSize: '14px',
+              fontWeight: '500',
+              background: '#374151',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              marginBottom: '16px'
+            }}
+          >
+            🧪 Test Edge Function Connection
+          </button>
 
           {/* Submit Button */}
           <button

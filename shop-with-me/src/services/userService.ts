@@ -1,5 +1,5 @@
-import { supabase } from '@/lib/supabase'
-import type { OnboardingFormData } from '@/components/OnboardingForm'
+import { supabase } from '../lib/supabase'
+import type { OnboardingFormData } from '../components/OnboardingForm'
 
 /**
  * Service response type
@@ -19,8 +19,8 @@ export type UserProfile = {
   sync_id: string
   username: string
   bio: string | null
+  display_name: string | null
   pfp_url: string | null
-  shop_user_id: string
   created_at: string
   updated_at: string
 }
@@ -33,10 +33,13 @@ export async function createUserProfile(
 ): Promise<ServiceResponse<UserProfile>> {
   try {
     console.log('📤 Calling create-profile edge function...')
+    console.log('📤 Form data:', formData)
 
     const { data, error } = await supabase.functions.invoke('create-profile', {
       body: formData,
     })
+
+    console.log('📤 Edge function response:', { data, error })
 
     if (error) {
       console.error('❌ Edge function error:', error)
@@ -69,7 +72,7 @@ export async function checkUsernameAvailability(
 ): Promise<ServiceResponse<boolean>> {
   try {
     // Direct database query (faster than edge function for simple checks)
-    const { data, error } = await supabase
+    const { error } = await supabase
       .from('user_profiles')
       .select('username')
       .eq('username', username.toLowerCase())

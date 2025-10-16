@@ -111,24 +111,21 @@ serve(async (req) => {
     const body = await req.json()
     console.log('📋 Received profile creation request')
 
-    const { username, bio, shop_user_id, pfp_url } = body
+    const { username, bio, display_name, pfp_url } = body
 
-    // Validate username
+    // Validate username (required)
     const usernameError = validateUsername(username)
     if (usernameError) {
       return errorResponse(usernameError, 400)
     }
 
-    // Validate bio
+    // Validate bio (optional)
     const bioError = validateBio(bio)
     if (bioError) {
       return errorResponse(bioError, 400)
     }
 
-    // Validate shop_user_id
-    if (!shop_user_id) {
-      return errorResponse('Shop user ID is required', 400)
-    }
+    // display_name and pfp_url are optional - Shop SDK may not always provide them
 
     // Check if username already exists
     const { data: existingUser } = await supabase
@@ -145,7 +142,7 @@ serve(async (req) => {
     const insertData = {
       username: username.toLowerCase(),
       bio: bio || null,
-      shop_user_id,
+      display_name: display_name || null,
       pfp_url: pfp_url || null,
     }
 

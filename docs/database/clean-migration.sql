@@ -38,9 +38,10 @@ CREATE TABLE user_profiles (
     username VARCHAR(20) UNIQUE NOT NULL,
     bio VARCHAR(150),
     
-    -- Shop SDK data (from useCurrentUser hook)
+    -- Shop SDK data (from useCurrentUser hook) - all optional
+    -- Shop SDK doesn't provide stable user IDs, only display name and avatar
+    display_name VARCHAR(100),
     pfp_url TEXT,
-    shop_user_id TEXT NOT NULL,
     
     -- Timestamps
     created_at TIMESTAMPTZ DEFAULT NOW(),
@@ -53,9 +54,6 @@ CREATE TABLE user_profiles (
 
 -- Username lookups (for friend search)
 CREATE UNIQUE INDEX idx_user_profiles_username ON user_profiles(username);
-
--- Shop user ID lookups (for Shop SDK integration)
-CREATE INDEX idx_user_profiles_shop_user_id ON user_profiles(shop_user_id);
 
 -- Recent users query (for admin/analytics)
 CREATE INDEX idx_user_profiles_created_at ON user_profiles(created_at DESC);

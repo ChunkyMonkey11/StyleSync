@@ -2,8 +2,6 @@ import { useEffect, useState, useCallback } from 'react'
 import { useSecureStorage } from '@shopify/shop-minis-react'
 import { AuthData } from '../types'
 
-const AUTH_STORAGE_KEY = 'stylesync_auth'
-
 // Generate a UUID v4
 function generateUUID(): string {
   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
@@ -31,9 +29,8 @@ export function useAuth() {
         
         console.log('✨ Created new user ID:', newUserId.substring(0, 8) + '...')
         
-        // Save to secure storage
+        // Save to secure storage (API: only one secret per Mini)
         await setSecret({ 
-          key: AUTH_STORAGE_KEY, 
           value: JSON.stringify(newAuthData) 
         })
         
@@ -50,8 +47,8 @@ export function useAuth() {
       try {
         console.log('🔐 Initializing auth...')
         
-        // Try to load existing auth data
-        const stored = await getSecret({ key: AUTH_STORAGE_KEY })
+        // Try to load existing auth data (API: getSecret takes no arguments)
+        const stored = await getSecret()
         console.log('🔑 Secure storage result:', stored ? 'found' : 'not found', 'type:', typeof stored)
         
         if (stored && typeof stored === 'string') {
@@ -71,7 +68,6 @@ export function useAuth() {
       } catch (error) {
         console.error('❌ Auth initialization error:', error)
         setError(error instanceof Error ? error.message : 'Failed to initialize auth')
-        // Set loading to false even on error
       } finally {
         console.log('✅ Auth initialization complete, isLoading set to false')
         setIsLoading(false)
@@ -80,32 +76,6 @@ export function useAuth() {
 
     initAuth()
   }, [getSecret, setSecret])
-
-  // Create a new user with UUID (exposed for manual use if needed)
-  const createNewUser = useCallback(async () => {
-    try {
-      const newUserId = generateUUID()
-      const newAuthData: AuthData = {
-        userId: newUserId,
-        createdAt: new Date().toISOString()
-      }
-      
-      console.log('✨ Created new user ID:', newUserId.substring(0, 8) + '...')
-      
-      // Save to secure storage
-      await setSecret({ 
-        key: AUTH_STORAGE_KEY, 
-        value: JSON.stringify(newAuthData) 
-      })
-      
-      console.log('💾 Saved new user to secure storage')
-      setAuthData(newAuthData)
-      return newAuthData
-    } catch (err) {
-      console.error('❌ Error creating new user:', err)
-      throw err
-    }
-  }, [setSecret])
 
   // Get the current user ID
   const getUserId = useCallback(() => {

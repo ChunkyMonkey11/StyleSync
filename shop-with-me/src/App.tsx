@@ -11,24 +11,33 @@ export function App() {
   const { buyerAttributes } = useBuyerAttributes()
   const { products: recentProducts } = useRecentProducts()
   const { products: savedProducts } = useSavedProducts()
-  const { userId, isLoading: authLoading } = useAuth()
+  const { isLoading: authLoading } = useAuth()
   const [view, setView] = useState<AppView>('loading')
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  // Check if user has a profile when userId is available
+  // Check if user has a profile - using local storage since Shop SDK doesn't provide stable user IDs
   useEffect(() => {
     async function checkUserProfile() {
-      console.log('🚀 checkUserProfile called - userId:', userId ? userId.substring(0, 8) + '...' : 'null', 'authLoading:', authLoading)
+      console.log('🚀 checkUserProfile called')
+      console.log('🔍 Shop SDK Hooks Debug:')
+      console.log('  currentUser:', currentUser)
+      console.log('  buyerAttributes:', buyerAttributes)
+      console.log('  recentProducts count:', recentProducts?.length || 0)
+      console.log('  savedProducts count:', savedProducts?.length || 0)
       
-      if (!userId || authLoading) {
-        console.log('⏳ Waiting for auth... userId:', !!userId, 'authLoading:', authLoading)
+      if (authLoading) {
+        console.log('⏳ Waiting for auth...')
         return
       }
 
       // Check if Supabase is configured
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
       const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+      
+      console.log('🔧 Supabase Config:')
+      console.log('  URL:', supabaseUrl)
+      console.log('  Key:', supabaseKey ? `${supabaseKey.substring(0, 20)}...` : 'undefined')
       
       if (!supabaseUrl || !supabaseKey || supabaseUrl === 'https://placeholder.supabase.co') {
         console.warn('⚠️ Supabase not configured, skipping database check - showing onboarding')
@@ -37,14 +46,24 @@ export function App() {
       }
 
       try {
-        console.log('🔍 Checking for existing profile for shop_user_id:', userId.substring(0, 20) + '...')
+        // Check local storage for saved username
+        const savedUsername = localStorage.getItem('stylesync_username')
         
-        // Check if profile exists in database using shop_user_id
-        const { data, error } = await getUserProfileByUsername(userId)
+        if (!savedUsername) {
+          console.log('📝 No saved username found, showing onboarding')
+          setView('onboarding')
+          return
+        }
+
+        console.log('🔍 Checking for existing profile for username:', savedUsername)
+        
+        // Check if profile exists in database
+        const { data, error } = await getUserProfileByUsername(savedUsername)
 
         if (error) {
-          // No profile found - show onboarding
-          console.log('📝 No profile found, showing onboarding')
+          // Profile not found - clear stale local storage and show onboarding
+          console.log('📝 Profile not found in database, clearing local storage')
+          localStorage.removeItem('stylesync_username')
           setView('onboarding')
         } else if (data) {
           // Profile exists - load it
@@ -54,6 +73,7 @@ export function App() {
         } else {
           // No data - show onboarding
           console.log('❓ No data returned, showing onboarding')
+          localStorage.removeItem('stylesync_username')
           setView('onboarding')
         }
       } catch (err) {
@@ -65,7 +85,7 @@ export function App() {
     }
 
     checkUserProfile()
-  }, [userId, authLoading])
+  }, [authLoading])
 
   // Handle onboarding form completion
   const handleOnboardingComplete = async (formData: OnboardingFormData) => {
@@ -87,6 +107,10 @@ export function App() {
       }
 
       console.log('✅ Profile created successfully!', data)
+      
+      // Save username to local storage for future sessions
+      localStorage.setItem('stylesync_username', data.username)
+      
       setUserProfile(data)
       setView('main')
     } catch (err) {
@@ -168,8 +192,8 @@ export function App() {
     )
   }
 
-  // Onboarding flow
-  if (view === 'onboarding' && userId) {
+  // Onboarding flow - FIXED: Remove userId requirement since Shop SDK might not provide it
+  if (view === 'onboarding') {
     return (
       <OnboardingForm 
         onComplete={handleOnboardingComplete}
@@ -181,6 +205,71 @@ export function App() {
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#f5f5f5', padding: '20px' }}>
       <div style={{ maxWidth: '600px', margin: '0 auto' }}>
+        {/* DEBUG PANEL - Shop App Environment */}
+        <div style={{ 
+          backgroundColor: '#1e293b',
+          color: '#e2e8f0',
+          padding: '16px',
+          borderRadius: '8px',
+          marginBottom: '20px',
+          fontFamily: 'monospace',
+          fontSize: '12px',
+          maxHeight: '400px',
+          overflow: 'auto'
+        }}>
+          <div style={{ fontWeight: 'bold', marginBottom: '12px', color: '#fbbf24' }}>
+            🔍 DEBUG: Shop App Environment
+          </div>
+          
+          <div style={{ marginBottom: '8px' }}>
+            <strong style={{ color: '#60a5fa' }}>Shop SDK Hooks:</strong>
+          </div>
+          <div style={{ marginLeft: '12px', marginBottom: '4px' }}>
+            currentUser: {currentUser ? '✅ Available' : '❌ null/undefined'}
+          </div>
+          <div style={{ marginLeft: '12px', marginBottom: '4px' }}>
+            buyerAttributes: {buyerAttributes ? '✅ Available' : '❌ null/undefined'}
+          </div>
+          <div style={{ marginLeft: '12px', marginBottom: '4px' }}>
+            recentProducts: {recentProducts?.length || 0} items
+          </div>
+          <div style={{ marginLeft: '12px', marginBottom: '8px' }}>
+            savedProducts: {savedProducts?.length || 0} items
+          </div>
+
+          <div style={{ marginBottom: '8px' }}>
+            <strong style={{ color: '#60a5fa' }}>Supabase Config:</strong>
+          </div>
+          <div style={{ marginLeft: '12px', marginBottom: '4px' }}>
+            URL: {import.meta.env.VITE_SUPABASE_URL ? '✅ Set' : '❌ Missing'}
+          </div>
+          <div style={{ marginLeft: '12px', marginBottom: '4px' }}>
+            Key: {import.meta.env.VITE_SUPABASE_ANON_KEY ? '✅ Set' : '❌ Missing'}
+          </div>
+
+          <div style={{ marginBottom: '8px' }}>
+            <strong style={{ color: '#60a5fa' }}>App State:</strong>
+          </div>
+          <div style={{ marginLeft: '12px', marginBottom: '4px' }}>
+            View: {view}
+          </div>
+          <div style={{ marginLeft: '12px', marginBottom: '4px' }}>
+            Auth Loading: {authLoading ? '⏳ Yes' : '✅ No'}
+          </div>
+          <div style={{ marginLeft: '12px', marginBottom: '4px' }}>
+            User Profile: {userProfile ? '✅ Loaded' : '❌ None'}
+          </div>
+          <div style={{ marginLeft: '12px', marginBottom: '4px' }}>
+            Local Storage: {localStorage.getItem('stylesync_username') || '❌ Empty'}
+          </div>
+
+          {error && (
+            <div style={{ marginTop: '8px', color: '#ef4444' }}>
+              <strong>Error:</strong> {error}
+            </div>
+          )}
+        </div>
+
         {/* Header */}
         <div style={{ 
           display: 'flex', 
@@ -499,20 +588,20 @@ export function App() {
                 border: '1px solid #e2e8f0',
                 marginTop: '8px'
               }}>
-                {JSON.stringify({
-                  username: userProfile?.username,
-                  syncId: userProfile?.sync_id,
-                  bio: userProfile?.bio,
-                  profilePicture: userProfile?.pfp_url,
-                  shopUserId: userProfile?.shop_user_id,
-                  metadata: {
-                    displayName: (currentUser as any)?.displayName,
-                    email: (currentUser as any)?.email,
-                    recentProductsCount: recentProducts?.length || 0,
-                    savedProductsCount: savedProducts?.length || 0,
-                    hasBuyerAttributes: !!buyerAttributes
-                  }
-                }, null, 2)}
+              {JSON.stringify({
+                username: userProfile?.username,
+                syncId: userProfile?.sync_id,
+                bio: userProfile?.bio,
+                displayName: userProfile?.display_name,
+                profilePicture: userProfile?.pfp_url,
+                metadata: {
+                  displayName: (currentUser as any)?.displayName,
+                  email: (currentUser as any)?.email,
+                  recentProductsCount: recentProducts?.length || 0,
+                  savedProductsCount: savedProducts?.length || 0,
+                  hasBuyerAttributes: !!buyerAttributes
+                }
+              }, null, 2)}
               </pre>
             </details>
           </div>
@@ -533,6 +622,7 @@ export function App() {
           </p>
         </div>
       </div>
+      
     </div>
   )
 }
