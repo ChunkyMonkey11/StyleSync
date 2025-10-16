@@ -1,0 +1,28 @@
+So far we have built out a 
+- onboarding flow
+    with:
+    username
+    bio
+    style preferences
+    Interest fields
+    Shop user integration
+    token generation
+
+
+- DB integration
+    - Supabase client is configured in src/lib/supabase.ts
+    - Profile data saves to userprofiles table
+    - The connection works (But no edge functions are used but we can do this later)
+    
+- Navigation system
+- app checks if user has profile(how is this done?)
+- shows the onboading page(basic) for new userprofiles
+- Then shows main app which is nothing but will be converted into our style sync page.
+- Navigation is quick. 
+
+
+Assumptions:
+    - We are okay with working on local host as rn we can't run on shop app. Which is fine until we have working prototype plus local hosts gives us console access
+    - So we will have manual john does. And No userId just a temp_random number as the UUID. 
+Next Steps:
+    - add interests column to the DB

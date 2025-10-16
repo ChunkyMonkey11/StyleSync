@@ -26,12 +26,19 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps) {
     const [username, setUsername] = useState('')
     const [bio, setBio] = useState('')
     const [stylePreferences, setStylePreferences] = useState<string[]>([])
+    const [interests, setInterests] = useState<string[]>([])
     const [errors, setErrors] = useState<Record<string, string>>({})
     const [isSubmitting, setIsSubmitting] = useState(false)
     
     const styleOptions = [
         'Casual', 'Formal', 'Streetwear', 'Vintage', 'Minimalist', 
         'Bohemian', 'Athletic', 'Business', 'Trendy', 'Classic'
+    ]
+    
+    const interestOptions = [
+        'Fashion', 'Streetwear', 'Vintage', 'Luxury', 'Sustainable', 
+        'Athletic', 'Formal', 'Accessories', 'Shoes', 'Jewelry',
+        'Beauty', 'Lifestyle', 'Travel', 'Art', 'Music'
     ]
     
     const validateUsername = (value: string) => {
@@ -46,6 +53,14 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps) {
             prev.includes(style) 
                 ? prev.filter(s => s !== style)
                 : [...prev, style]
+        )
+    }
+    
+    const toggleInterest = (interest: string) => {
+        setInterests(prev => 
+            prev.includes(interest) 
+                ? prev.filter(i => i !== interest)
+                : [...prev, interest]
         )
     }
     
@@ -89,7 +104,8 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps) {
                         display_name: currentUser?.displayName || username,
                         profile_pic: currentUser?.avatarImage?.url || '',
                         bio: bio.trim(),
-                        style_preferences: stylePreferences
+                        style_preferences: stylePreferences,
+                        interests: interests
                     }])
                     .select()
 
@@ -186,6 +202,27 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps) {
                                     }`}
                                 >
                                     {style}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                    
+                    {/* Interests */}
+                    <div className="mb-6">
+                        <label className="block text-sm font-medium mb-3">Interests (for product recommendations)</label>
+                        <div className="grid grid-cols-2 gap-2">
+                            {interestOptions.map((interest) => (
+                                <button
+                                    key={interest}
+                                    type="button"
+                                    onClick={() => toggleInterest(interest)}
+                                    className={`p-2 text-sm rounded-lg border transition-colors ${
+                                        interests.includes(interest)
+                                            ? 'bg-green-500 text-white border-green-500'
+                                            : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                                    }`}
+                                >
+                                    {interest}
                                 </button>
                             ))}
                         </div>
