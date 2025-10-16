@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { useCurrentUser, useGenerateUserToken, Button, Input, Card, Image } from '@shopify/shop-minis-react'
+import { useCurrentUser, Button, Input, Card, Image ,useGenerateUserToken} from '@shopify/shop-minis-react'
+import { supabase } from '../lib/supabase'
 
 // UserProfile interface for future use
 // interface UserProfile {
@@ -15,10 +16,13 @@ import { useCurrentUser, useGenerateUserToken, Button, Input, Card, Image } from
 //     updated_at?: string
 // }
 
-export function OnboardingPage() {
+interface OnboardingPageProps {
+    onComplete: () => void
+}
+
+export function OnboardingPage({ onComplete }: OnboardingPageProps) {
     const { currentUser, loading } = useCurrentUser()
-    const { generateUserToken } = useGenerateUserToken()
-    
+    const { generateUserToken } = useGenerateUserToken()  // Add this line
     const [username, setUsername] = useState('')
     const [bio, setBio] = useState('')
     const [stylePreferences, setStylePreferences] = useState<string[]>([])
@@ -75,7 +79,27 @@ export function OnboardingPage() {
                 }
                 
                 console.log('Profile data:', profileData)
-                // TODO: Save to Supabase
+                
+                // Save to Supabase
+                const { data: savedProfile, error } = await supabase
+                    .from('userprofiles')
+                    .insert([{
+                        shop_public_id: 'temp_' + Date.now(),
+                        username: username.toLowerCase(),
+                        display_name: currentUser?.displayName || username,
+                        profile_pic: currentUser?.avatarImage?.url || '',
+                        bio: bio.trim(),
+                        style_preferences: stylePreferences
+                    }])
+                    .select()
+
+                if (error) {
+                    throw error
+                }
+
+                console.log('Profile saved:', savedProfile)
+                alert('Profile created successfully!')
+                onComplete() // Navigate to main app 
             }
         } catch (error) {
             console.error('Error:', error)
