@@ -8,5 +8,8 @@
     "email",
     "offline_access"
   ],
-  "handle": "stylesync"
+  "handle": "stylesync",
+  "privacy_policy_url": "https://www.stylesync.com/privacy",
+  "terms_url": "https://www.stylesync.com/terms",
+  "trusted_domains": ["https://fhyisvyhahqxryanjnby.supabase.co"]
 }

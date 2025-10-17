@@ -150,3 +150,4 @@ export function FriendsPage({ onBack }: FriendsPageProps) {
         </div>
     )
 }
+

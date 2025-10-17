@@ -151,6 +151,12 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps) {
                 }
 
                 console.log('Profile saved:', savedProfile)
+                
+                // Store the user ID for friend connections
+                if (savedProfile && savedProfile[0]) {
+                    localStorage.setItem('currentUserId', savedProfile[0].id)
+                }
+                
                 alert('Profile created successfully!')
                 onComplete() // Navigate to main app 
             }

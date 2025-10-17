@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { OnboardingPage } from './pages/OnboardingPage'
 import { MainApp } from './pages/MainApp'
 import { supabase } from './lib/supabase'
+// No Shopify initialization needed for Shop Minis React
 
 export function App() {
   const [hasProfile, setHasProfile] = useState(false)
