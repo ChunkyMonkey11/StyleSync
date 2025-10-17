@@ -1,7 +1,14 @@
+import { useState } from 'react'
 import { useCurrentUser } from '@shopify/shop-minis-react'
+import { FriendsPage } from './FriendsPage'
 
 export function MainApp() {
     const { currentUser } = useCurrentUser()
+    const [currentView, setCurrentView] = useState<'main' | 'friends'>('main')
+
+    if (currentView === 'friends') {
+        return <FriendsPage onBack={() => setCurrentView('main')} />
+    }
 
     return (
         <div className="p-4 max-w-md mx-auto">
@@ -27,6 +34,17 @@ export function MainApp() {
                         <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded">Casual</span>
                         <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded">Streetwear</span>
                     </div>
+                </div>
+
+                <div className="bg-white p-4 rounded-lg border shadow-sm">
+                    <h2 className="font-semibold mb-2">Friends</h2>
+                    <p className="text-sm text-gray-600 mb-3">Connect with friends to see their style!</p>
+                    <button 
+                        onClick={() => setCurrentView('friends')}
+                        className="w-full bg-purple-600 text-white py-2 px-4 rounded-lg hover:bg-purple-700 transition-colors"
+                    >
+                        Manage Friends
+                    </button>
                 </div>
             </div>
         </div>
