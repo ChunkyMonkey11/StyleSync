@@ -2,19 +2,18 @@ import { useState } from 'react'
 import { useCurrentUser, Button, Input, Card, Image ,useGenerateUserToken} from '@shopify/shop-minis-react'
 import { supabase } from '../lib/supabase'
 
-// UserProfile interface for future use
-// interface UserProfile {
-//     id: string
-//     shop_public_id: string
-//     username: string
-//     display_name: string
-//     profile_pic?: string
-//     bio?: string
-//     interests?: string[]
-//     style_preferences?: string[]
-//     created_at: string
-//     updated_at?: string
-// }
+interface UserProfile {
+    id: string                    // Database primary key
+    shop_public_id: string        // Shop user identifier
+    username: string              // User's chosen username
+    display_name: string          // From Shop SDK
+    profile_pic?: string          // Avatar URL from Shop
+    bio?: string                  // User's bio
+    interests?: string[]          // User's interests array
+    style_preferences?: string[]  // User's style preferences array
+    created_at: string           // Database timestamp
+    updated_at?: string          // Database timestamp
+}
 
 interface OnboardingPageProps {
     onComplete: () => void
@@ -27,6 +26,8 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps) {
     const [bio, setBio] = useState('')
     const [stylePreferences, setStylePreferences] = useState<string[]>([])
     const [interests, setInterests] = useState<string[]>([])
+    const [customInterest, setCustomInterest] = useState('')
+    const [activeBubbleIndex, setActiveBubbleIndex] = useState<number | null>(null)
     const [errors, setErrors] = useState<Record<string, string>>({})
     const [isSubmitting, setIsSubmitting] = useState(false)
     
@@ -56,12 +57,44 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps) {
         )
     }
     
-    const toggleInterest = (interest: string) => {
-        setInterests(prev => 
-            prev.includes(interest) 
-                ? prev.filter(i => i !== interest)
-                : [...prev, interest]
-        )
+    
+    
+    const removeInterest = (interestToRemove: string) => {
+        setInterests(prev => prev.filter(interest => interest !== interestToRemove))
+    }
+    
+    const startNewBubble = () => {
+        setActiveBubbleIndex(interests.length)
+        setCustomInterest('')
+    }
+    
+    const handleBubbleKeyPress = (e: React.KeyboardEvent) => {
+        if (e.key === 'Enter') {
+            e.preventDefault()
+            if (customInterest.trim() && !interests.includes(customInterest.trim())) {
+                setInterests(prev => [...prev, customInterest.trim()])
+                setCustomInterest('')
+                setActiveBubbleIndex(null)
+            }
+        }
+        if (e.key === 'Escape') {
+            setActiveBubbleIndex(null)
+            setCustomInterest('')
+        }
+    }
+    
+    const handleBubbleBlur = () => {
+        if (customInterest.trim() && !interests.includes(customInterest.trim())) {
+            setInterests(prev => [...prev, customInterest.trim()])
+        }
+        setActiveBubbleIndex(null)
+        setCustomInterest('')
+    }
+    
+    const addQuickInterest = (interest: string) => {
+        if (!interests.includes(interest)) {
+            setInterests(prev => [...prev, interest])
+        }
     }
     
     const handleSubmit = async (e: React.FormEvent) => {
@@ -82,31 +115,35 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps) {
             
             if (token) {
                 console.log('Generated token:', token)
-                // TODO: Send to your backend for verification
                 
-                const profileData = {
+                // Generate a proper UUID format
+                const generateUUID = () => {
+                    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+                        const r = Math.random() * 16 | 0;
+                        const v = c == 'x' ? r : (r & 0x3 | 0x8);
+                        return v.toString(16);
+                    });
+                }
+
+                // Create profile data that matches your interface
+                const profileData: UserProfile = {
+                    id: generateUUID(), // Generate proper UUID
+                    shop_public_id: (currentUser as any)?.id || 'temp_' + Date.now(),
                     username: username.toLowerCase(),
                     display_name: currentUser?.displayName || username,
                     profile_pic: currentUser?.avatarImage?.url || '',
-                    bio: bio.trim(),
+                    bio: bio.trim() || undefined,
                     style_preferences: stylePreferences,
-                    shop_token: token // Temporary - you'll verify this on backend
+                    interests: interests,
+                    created_at: new Date().toISOString()
                 }
                 
                 console.log('Profile data:', profileData)
                 
-                // Save to Supabase
+                // Save to Supabase using the typed data
                 const { data: savedProfile, error } = await supabase
                     .from('userprofiles')
-                    .insert([{
-                        shop_public_id: 'temp_' + Date.now(),
-                        username: username.toLowerCase(),
-                        display_name: currentUser?.displayName || username,
-                        profile_pic: currentUser?.avatarImage?.url || '',
-                        bio: bio.trim(),
-                        style_preferences: stylePreferences,
-                        interests: interests
-                    }])
+                    .insert([profileData])
                     .select()
 
                 if (error) {
@@ -209,22 +246,83 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps) {
                     
                     {/* Interests */}
                     <div className="mb-6">
-                        <label className="block text-sm font-medium mb-3">Interests (for product recommendations)</label>
-                        <div className="grid grid-cols-2 gap-2">
-                            {interestOptions.map((interest) => (
-                                <button
-                                    key={interest}
-                                    type="button"
-                                    onClick={() => toggleInterest(interest)}
-                                    className={`p-2 text-sm rounded-lg border transition-colors ${
-                                        interests.includes(interest)
-                                            ? 'bg-green-500 text-white border-green-500'
-                                            : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
-                                    }`}
+                        <label className="block text-sm font-medium mb-3">Your Interests</label>
+                        
+                        {/* Bubble Interface */}
+                        <div className="flex flex-wrap gap-2 mb-4">
+                            {/* Existing Interest Bubbles */}
+                            {interests.map((interest, index) => (
+                                <div
+                                    key={index}
+                                    className="flex items-center gap-1 bg-blue-100 text-blue-800 px-3 py-2 rounded-full text-sm border-2 border-blue-200"
                                 >
-                                    {interest}
-                                </button>
+                                    <span>{interest}</span>
+                                    <button
+                                        type="button"
+                                        onClick={() => removeInterest(interest)}
+                                        className="text-blue-600 hover:text-blue-800 ml-1 font-bold"
+                                    >
+                                        ×
+                                    </button>
+                                </div>
                             ))}
+                            
+                            {/* Active Input Bubble */}
+                            {activeBubbleIndex !== null && (
+                                <div className="bg-blue-50 border-2 border-blue-300 border-dashed px-3 py-2 rounded-full text-sm">
+                                    <input
+                                        type="text"
+                                        value={customInterest}
+                                        onChange={(e) => setCustomInterest(e.target.value)}
+                                        onKeyDown={handleBubbleKeyPress}
+                                        onBlur={handleBubbleBlur}
+                                        placeholder="Type interest..."
+                                        className="bg-transparent border-none outline-none text-blue-800 placeholder-blue-400 w-32"
+                                        autoFocus
+                                    />
+                                </div>
+                            )}
+                            
+                            {/* Add New Bubble Button */}
+                            {activeBubbleIndex === null && (
+                                <button
+                                    type="button"
+                                    onClick={startNewBubble}
+                                    className="bg-gray-100 border-2 border-dashed border-gray-300 text-gray-500 px-3 py-2 rounded-full text-sm hover:bg-gray-200 hover:border-gray-400 transition-colors"
+                                >
+                                    + Add Interest
+                                </button>
+                            )}
+                        </div>
+                        
+                        {/* Simple Quick Add Grid */}
+                        <div>
+                            <p className="text-sm text-gray-600 mb-4">Quick add:</p>
+                            <div className="grid grid-cols-3 gap-3">
+                                {interestOptions.map((interest) => {
+                                    const isSelected = interests.includes(interest)
+                                    
+                                    return (
+                                        <button
+                                            key={interest}
+                                            type="button"
+                                            onClick={() => addQuickInterest(interest)}
+                                            disabled={isSelected}
+                                            className={`
+                                                p-3 text-sm rounded-lg border transition-all duration-300 ease-out
+                                                hover:scale-105 hover:shadow-lg
+                                                active:scale-95
+                                                ${isSelected 
+                                                    ? 'bg-gray-200 text-gray-400 border-gray-300 cursor-not-allowed' 
+                                                    : 'bg-white text-gray-700 border-gray-300 hover:border-purple-300 hover:bg-purple-50 hover:text-purple-700 shadow-md hover:shadow-lg cursor-pointer'
+                                                }
+                                            `}
+                                        >
+                                            {interest}
+                                        </button>
+                                    )
+                                })}
+                            </div>
                         </div>
                     </div>
                     
@@ -245,6 +343,65 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps) {
                     </Button>
                 </form>
             </Card>
+            
+            {/* Custom CSS Animations */}
+            <style dangerouslySetInnerHTML={{
+                __html: `
+                    @keyframes waterfall {
+                        0% {
+                            transform: translateY(0%) scale(0.9);
+                            opacity: 0;
+                        }
+                        10% {
+                            opacity: 1;
+                        }
+                        90% {
+                            opacity: 1;
+                        }
+                        100% {
+                            transform: translateY(-200%) scale(0.9);
+                            opacity: 0;
+                        }
+                    }
+                    
+                    @keyframes drift {
+                        0%, 100% { transform: translateX(0px); }
+                        25% { transform: translateX(-8px); }
+                        50% { transform: translateX(6px); }
+                        75% { transform: translateX(-4px); }
+                    }
+                    
+                    @keyframes float {
+                        0%, 100% { transform: translateY(0px) rotate(0deg); }
+                        25% { transform: translateY(-8px) rotate(1deg); }
+                        50% { transform: translateY(-4px) rotate(-1deg); }
+                        75% { transform: translateY(-12px) rotate(0.5deg); }
+                    }
+                    
+                    @keyframes bubblePop {
+                        0% { transform: scale(1) rotate(0deg); }
+                        50% { transform: scale(1.3) rotate(180deg); }
+                        100% { transform: scale(1) rotate(360deg); }
+                    }
+                    
+                    .animate-waterfall {
+                        animation: waterfall 6s linear infinite;
+                    }
+                    
+                    .animate-float {
+                        animation: float 6s ease-in-out infinite;
+                    }
+                    
+                    .animate-bubble-pop {
+                        animation: bubblePop 0.6s ease-out;
+                    }
+                    
+                    .bubble-hover:hover {
+                        animation-play-state: paused;
+                        transform: translateY(-4px) scale(1.05);
+                    }
+                `
+            }} />
         </div>
     )
 }
