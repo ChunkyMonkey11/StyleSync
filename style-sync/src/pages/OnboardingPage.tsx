@@ -1,19 +1,6 @@
 import { useState } from 'react'
-import { useCurrentUser, Button, Input, Card, Image ,useGenerateUserToken} from '@shopify/shop-minis-react'
-import { supabase } from '../lib/supabase'
-
-interface UserProfile {
-    id: string                    // Database primary key
-    shop_public_id: string        // Shop user identifier
-    username: string              // User's chosen username
-    display_name: string          // From Shop SDK
-    profile_pic?: string          // Avatar URL from Shop
-    bio?: string                  // User's bio
-    interests?: string[]          // User's interests array
-    style_preferences?: string[]  // User's style preferences array
-    created_at: string           // Database timestamp
-    updated_at?: string          // Database timestamp
-}
+import { useCurrentUser, Button, Input, Card, Image } from '@shopify/shop-minis-react'
+import { useAuth } from '../hooks/useAuth'
 
 interface OnboardingPageProps {
     onComplete: () => void
@@ -21,7 +8,7 @@ interface OnboardingPageProps {
 
 export function OnboardingPage({ onComplete }: OnboardingPageProps) {
     const { currentUser, loading } = useCurrentUser()
-    const { generateUserToken } = useGenerateUserToken()  // Add this line
+    const { getValidToken } = useAuth()
     const [username, setUsername] = useState('')
     const [bio, setBio] = useState('')
     const [stylePreferences, setStylePreferences] = useState<string[]>([])
@@ -109,60 +96,50 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps) {
         setIsSubmitting(true)
         
         try {
-            // Generate Shop user token
-            const { data } = await generateUserToken()
-            const { token } = data
+            // Get JWT token for authentication
+            const token = await getValidToken()
             
-            if (token) {
-                console.log('Generated token:', token)
-                
-                // Generate a proper UUID format
-                const generateUUID = () => {
-                    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-                        const r = Math.random() * 16 | 0;
-                        const v = c == 'x' ? r : (r & 0x3 | 0x8);
-                        return v.toString(16);
-                    });
-                }
-
-                // Create profile data that matches your interface
-                const profileData: UserProfile = {
-                    id: generateUUID(), // Generate proper UUID
-                    shop_public_id: (currentUser as any)?.id || 'temp_' + Date.now(),
-                    username: username.toLowerCase(),
-                    display_name: currentUser?.displayName || username,
-                    profile_pic: currentUser?.avatarImage?.url || '',
-                    bio: bio.trim() || undefined,
-                    style_preferences: stylePreferences,
-                    interests: interests,
-                    created_at: new Date().toISOString()
-                }
-                
-                console.log('Profile data:', profileData)
-                
-                // Save to Supabase using the typed data
-                const { data: savedProfile, error } = await supabase
-                    .from('userprofiles')
-                    .insert([profileData])
-                    .select()
-
-                if (error) {
-                    throw error
-                }
-
-                console.log('Profile saved:', savedProfile)
-                
-                // Store the user ID for friend connections
-                if (savedProfile && savedProfile[0]) {
-                    localStorage.setItem('currentUserId', savedProfile[0].id)
-                }
-                
-                alert('Profile created successfully!')
-                onComplete() // Navigate to main app 
+            // Prepare profile data
+            // Note: We don't send id or shop_public_id - Edge Function handles these
+            const profileData = {
+                username: username.toLowerCase(),
+                display_name: currentUser?.displayName || username,
+                profile_pic: currentUser?.avatarImage?.url || '',
+                bio: bio.trim() || undefined,
+                style_preferences: stylePreferences,
+                interests: interests,
+                created_at: new Date().toISOString()
             }
+            
+            console.log('Creating profile with data:', profileData)
+            
+            // Call create-profile Edge Function
+            const response = await fetch(
+                'https://fhyisvyhahqxryanjnby.supabase.co/functions/v1/create-profile',
+                {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ profileData })
+                }
+            )
+
+            if (!response.ok) {
+                const errorData = await response.json()
+                throw new Error(errorData.error || 'Failed to create profile')
+            }
+
+            const result = await response.json()
+            console.log('Profile created:', result.profile)
+            
+            alert('Profile created successfully!')
+            onComplete() // Navigate to main app
+            
         } catch (error) {
             console.error('Error:', error)
-            setErrors({ general: 'Failed to create profile. Please try again.' })
+            setErrors({ general: error instanceof Error ? error.message : 'Failed to create profile. Please try again.' })
         } finally {
             setIsSubmitting(false)
         }

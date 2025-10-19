@@ -1,28 +1,62 @@
-So far we have built out a 
-- onboarding flow
-    with:
-    username
-    bio
-    style preferences
-    Interest fields
-    Shop user integration
-    token generation
+**@steve @david** Hey Steve and David! 👋 Hope you're both doing well!
 
+I'm hitting a wall with my StyleSync Shop Mini and could use some guidance. The Mini renders perfectly in localhost but completely fails to load in the actual Shop App environment.
 
-- DB integration
-    - Supabase client is configured in src/lib/supabase.ts
-    - Profile data saves to userprofiles table
-    - The connection works (But no edge functions are used but we can do this later)
-    
-- Navigation system
-- app checks if user has profile(how is this done?)
-- shows the onboading page(basic) for new userprofiles
-- Then shows main app which is nothing but will be converted into our style sync page.
-- Navigation is quick. 
+## 🔍 **Issue Summary**
+• ✅ **Browser** (`localhost:5173`): Mini loads and functions correctly  
+• ❌ **Shop App** (iOS Simulator + Physical Device): White screen, no content  
+• ❌ **Xcode "Apps and Devices Inspection"**: Shows "No inspectable contents"
 
+## 🛠️ **What I've Tried**
 
-Assumptions:
-    - We are okay with working on local host as rn we can't run on shop app. Which is fine until we have working prototype plus local hosts gives us console access
-    - So we will have manual john does. And No userId just a temp_random number as the UUID. 
-Next Steps:
-    - add interests column to the DB
+### **Dependencies & Configuration**
+• ✅ Verified `@shopify/shop-minis-react` version compatibility (0.2.0)  
+• ✅ Added missing `vite.config.mjs` with proper optimization  
+• ✅ Fixed CSS imports order (Tailwind + Shop Minis styles)  
+• ✅ Updated `manifest.json` with required fields
+
+### **Authentication & Edge Functions**
+• ✅ Migrated from direct Supabase calls to Edge Functions (following your Supabase guide)  
+• ✅ Created `useAuth` hook for JWT token management  
+• ✅ Deployed `auth`, `check-profile`, and `create-profile` Edge Functions  
+• ✅ Updated Supabase secrets with correct API keys  
+• ✅ Fixed 401 authentication errors
+
+### **Build & Development Setup**
+• ✅ Verified TypeScript configuration  
+• ✅ Confirmed all required dependencies are installed  
+• ✅ Tested both iOS Simulator (`npm start` → press `i`) and QR code scanning  
+• ✅ Checked network accessibility and port configuration
+
+### **Debugging Attempts**
+• ✅ Created minimal test App.tsx (red screen) - still didn't render in Shop environment  
+• ✅ Verified Shop App is running and accessible on simulator  
+• ✅ Checked for import errors and syntax issues  
+• ✅ Confirmed no localStorage usage (Shop Minis compliant)
+
+## 📋 **Current Setup**
+• **SDK Version**: `@shopify/shop-minis-react@0.2.0`  
+• **CLI Version**: `@shopify/shop-minis-cli@0.0.197`  
+• **Architecture**: Edge Functions + JWT authentication  
+• **Environment**: iOS Simulator (iOS 18.6) + Physical iPhone
+
+## 🤔 **Key Question**
+The fact that the Mini works perfectly in browser but fails completely in Shop App suggests an environment-specific issue rather than a code problem. Could this be related to:
+• Shop App not properly recognizing/loading the Mini?  
+• Missing development configuration in Shop App?  
+• Version compatibility issues with the newer SDK?
+
+## 🔧 **Next Steps**
+Planning to run `npx shop-minis doctor` to see if it catches any configuration issues we might have missed. Any other diagnostic steps or specific areas you'd recommend investigating?
+
+The Edge Functions integration is working great - just need to get the Mini actually loading in the Shop environment! 🙏
+
+---
+
+**This Slack message:**
+• Uses Slack formatting with bullet points and emojis
+• Maintains a friendly, collaborative tone
+• Clearly organizes the information
+• Tags the developers directly
+• Provides all the technical context they need
+• Asks specific questions for next steps
