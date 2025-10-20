@@ -2,8 +2,8 @@
   "name": "StyleSync",
   "permissions": [],
   "scopes": [
-    "user_settings:read"
-  , "openid",
+    "user_settings:read",
+    "openid",
     "profile",
     "email",
     "offline_access"

@@ -15,11 +15,15 @@ export function App() {
   }, [])
 
   const checkUserProfile = async () => {
+    console.log('🔍 App: Checking user profile...')
     try {
       // Get JWT token for authentication
+      console.log('🔐 App: Getting JWT token...')
       const token = await getValidToken()
+      console.log('✅ App: Got JWT token')
       
       // Call check-profile Edge Function
+      console.log('📡 App: Calling check-profile Edge Function...')
       const response = await fetch(
         'https://fhyisvyhahqxryanjnby.supabase.co/functions/v1/check-profile',
         {
@@ -31,19 +35,28 @@ export function App() {
         }
       )
 
+      console.log('📡 App: check-profile response status:', response.status)
+
       if (!response.ok) {
+        const errorText = await response.text()
+        console.error('❌ App: check-profile failed:', response.status, errorText)
         throw new Error(`Failed to check profile: ${response.status}`)
       }
 
       const result = await response.json()
+      console.log('✅ App: Profile check result:', result)
       setHasProfile(result.hasProfile)
       
     } catch (error) {
-      console.error('Error checking profile:', error)
+      console.error('❌ App: Error checking profile:', error)
+      if (error instanceof Error) {
+        console.error('Error details:', error.message, error.stack)
+      }
       setError('Failed to load profile. Please try again.')
       setHasProfile(false)
     } finally {
       setIsLoading(false)
+      console.log('✅ App: Profile check complete')
     }
   }
 

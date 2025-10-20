@@ -1,62 +1,52 @@
-**@steve @david** Hey Steve and David! 👋 Hope you're both doing well!
+    Hi! I'm developing a Shop Mini called StyleSync and experiencing a white screen issue that only occurs in the Shop App environment (iOS Simulator and physical device). The Mini works perfectly in localhost browser but fails to load in the actual Shop environment.
 
-I'm hitting a wall with my StyleSync Shop Mini and could use some guidance. The Mini renders perfectly in localhost but completely fails to load in the actual Shop App environment.
+    **Issue:**
+    - ✅ Works: localhost:5173 in browser (all UI renders correctly)
+    - ❌ Fails: Shop App on iOS Simulator - white screen, no content
+    - ❌ Xcode "Apps and Devices Inspection" shows "No inspectable contents"
 
-## 🔍 **Issue Summary**
-• ✅ **Browser** (`localhost:5173`): Mini loads and functions correctly  
-• ❌ **Shop App** (iOS Simulator + Physical Device): White screen, no content  
-• ❌ **Xcode "Apps and Devices Inspection"**: Shows "No inspectable contents"
+    **Current Setup:**
+    - SDK: @shopify/shop-minis-react@0.2.0
+    - CLI: @shopify/shop-minis-cli@0.0.197
+    - React: 18.2.0
+    - TypeScript with Tailwind CSS v4
+    - Using Supabase Edge Functions for backend (following your official guide)
 
-## 🛠️ **What I've Tried**
+    **What I've Already Fixed:**
+    - ✅ Created proper vite.config.mjs with Shop Minis optimization
+    - ✅ Fixed CSS import order (Tailwind before Shop Minis styles)
+    - ✅ Corrected manifest.json formatting
+    - ✅ Implemented JWT authentication via Edge Functions (no direct Supabase calls)
+    - ✅ Created useAuth hook with useGenerateUserToken and useSecureStorage
+    - ✅ Removed all localStorage usage
+    - ✅ Added privacy_policy_url, terms_url, and trusted_domains to manifest
+    - ✅ Deployed Edge Functions: auth, check-profile, create-profile
+    - ✅ Cleared all caches (.minis-cache, node_modules/.vite, dist)
 
-### **Dependencies & Configuration**
-• ✅ Verified `@shopify/shop-minis-react` version compatibility (0.2.0)  
-• ✅ Added missing `vite.config.mjs` with proper optimization  
-• ✅ Fixed CSS imports order (Tailwind + Shop Minis styles)  
-• ✅ Updated `manifest.json` with required fields
+    **What I've Tested:**
+    - Running `npm start` → compiles successfully
+    - Pressing `i` to open iOS Simulator → Shop App opens but shows white screen
+    - Browser localhost → works perfectly with all authentication flows
+    - All TypeScript files compile without errors
+    - No linter errors
 
-### **Authentication & Edge Functions**
-• ✅ Migrated from direct Supabase calls to Edge Functions (following your Supabase guide)  
-• ✅ Created `useAuth` hook for JWT token management  
-• ✅ Deployed `auth`, `check-profile`, and `create-profile` Edge Functions  
-• ✅ Updated Supabase secrets with correct API keys  
-• ✅ Fixed 401 authentication errors
+    **Key Files Structure:**
+    ```
+    src/
+    ├── App.tsx (uses useAuth hook, calls Edge Functions)
+    ├── main.tsx (wrapped in MinisContainer)
+    ├── index.css (@import "tailwindcss" then @import Shop Minis styles)
+    ├── manifest.json (valid JSON with all required fields)
+    ├── hooks/useAuth.ts (JWT token management)
+    └── pages/ (OnboardingPage, MainApp, FriendsPage)
+    ```
 
-### **Build & Development Setup**
-• ✅ Verified TypeScript configuration  
-• ✅ Confirmed all required dependencies are installed  
-• ✅ Tested both iOS Simulator (`npm start` → press `i`) and QR code scanning  
-• ✅ Checked network accessibility and port configuration
+    **Questions:**
+    1. Is there a specific diagnostic command I should run? (I saw mention of `npx shop-minis doctor`)
+    2. Could this be related to SDK version 0.2.0 compatibility?
+    3. Are there any known issues with Edge Functions + Shop Minis integration?
+    4. What additional logging or debugging can I enable to see what's failing in the Shop App?
 
-### **Debugging Attempts**
-• ✅ Created minimal test App.tsx (red screen) - still didn't render in Shop environment  
-• ✅ Verified Shop App is running and accessible on simulator  
-• ✅ Checked for import errors and syntax issues  
-• ✅ Confirmed no localStorage usage (Shop Minis compliant)
+    The fact that it works in browser but not Shop App suggests an environment-specific issue rather than code logic. Any guidance would be greatly appreciated!
 
-## 📋 **Current Setup**
-• **SDK Version**: `@shopify/shop-minis-react@0.2.0`  
-• **CLI Version**: `@shopify/shop-minis-cli@0.0.197`  
-• **Architecture**: Edge Functions + JWT authentication  
-• **Environment**: iOS Simulator (iOS 18.6) + Physical iPhone
 
-## 🤔 **Key Question**
-The fact that the Mini works perfectly in browser but fails completely in Shop App suggests an environment-specific issue rather than a code problem. Could this be related to:
-• Shop App not properly recognizing/loading the Mini?  
-• Missing development configuration in Shop App?  
-• Version compatibility issues with the newer SDK?
-
-## 🔧 **Next Steps**
-Planning to run `npx shop-minis doctor` to see if it catches any configuration issues we might have missed. Any other diagnostic steps or specific areas you'd recommend investigating?
-
-The Edge Functions integration is working great - just need to get the Mini actually loading in the Shop environment! 🙏
-
----
-
-**This Slack message:**
-• Uses Slack formatting with bullet points and emojis
-• Maintains a friendly, collaborative tone
-• Clearly organizes the information
-• Tags the developers directly
-• Provides all the technical context they need
-• Asks specific questions for next steps

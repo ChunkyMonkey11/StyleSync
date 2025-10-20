@@ -4,12 +4,15 @@ import './index.css'
 import {MinisContainer} from '@shopify/shop-minis-react'
 
 import {App} from './App'
+import {ErrorBoundary} from './components/ErrorBoundary'
 
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <MinisContainer>
-      <App />
-    </MinisContainer>
+    <ErrorBoundary>
+      <MinisContainer>
+        <App />
+      </MinisContainer>
+    </ErrorBoundary>
   </StrictMode>
 )

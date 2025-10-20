@@ -40,21 +40,29 @@ export function useAuth() {
       try {
         const stored = await getSecret()
         if (stored) {
-          const data: AuthData = JSON.parse(stored)
-          
-          // Check if token is still valid (with 1 day buffer for safety)
-          // If expires in more than 1 day, we can still use it
-          if (data.expiresAt > Date.now() + 86400000) {  // 86400000ms = 1 day
-            setJwtToken(data.token)
-            console.log('Loaded existing JWT token from secure storage')
-          } else {
-            // Token expired or expiring soon, clear it
-            await removeSecret()
-            console.log('Stored token expired, cleared from storage')
+          // Handle mock data in localhost (returns "secret-value" string)
+          try {
+            const data: AuthData = JSON.parse(stored)
+            
+            // Check if token is still valid (with 1 day buffer for safety)
+            // If expires in more than 1 day, we can still use it
+            if (data.expiresAt > Date.now() + 86400000) {  // 86400000ms = 1 day
+              setJwtToken(data.token)
+              console.log('✅ Loaded existing JWT token from secure storage')
+            } else {
+              // Token expired or expiring soon, clear it
+              await removeSecret()
+              console.log('⏰ Stored token expired, cleared from storage')
+            }
+          } catch (parseError) {
+            // In localhost, getSecret() returns mock string "secret-value"
+            console.log('⚠️ Could not parse stored token (likely localhost mock data)')
           }
+        } else {
+          console.log('ℹ️ No stored token found')
         }
       } catch (error) {
-        console.error('Failed to load token:', error)
+        console.error('❌ Failed to load token:', error)
       }
     }
     loadToken()
@@ -74,30 +82,39 @@ export function useAuth() {
     if (jwtToken) {
       const stored = await getSecret()
       if (stored) {
-        const data: AuthData = JSON.parse(stored)
-        // If expires in more than 1 day, use existing token
-        if (data.expiresAt > Date.now() + 86400000) {
-          console.log('Using existing JWT token')
-          return jwtToken
+        try {
+          const data: AuthData = JSON.parse(stored)
+          // If expires in more than 1 day, use existing token
+          if (data.expiresAt > Date.now() + 86400000) {
+            console.log('✅ Using existing JWT token')
+            return jwtToken
+          }
+        } catch (parseError) {
+          console.log('⚠️ Token parse error, fetching new token')
         }
       }
     }
 
     // Need to get a new token
-    console.log('Fetching new JWT token...')
+    console.log('🔄 Fetching new JWT token...')
     setIsLoading(true)
     
     try {
       // Step 1: Get Shop Mini token from SDK
+      console.log('📱 Step 1: Generating Shop Mini token...')
       const result = await generateUserToken()
       if (!result.data?.token) {
+        console.error('❌ Failed to generate Shop Mini token:', result)
         throw new Error('Failed to generate Shop Mini token')
       }
       
       const shopMiniToken = result.data.token
-      console.log('Got Shop Mini token, exchanging for JWT...')
+      console.log('✅ Got Shop Mini token, exchanging for JWT...')
 
       // Step 2: Exchange Shop Mini token for JWT via auth Edge Function
+      console.log('🔐 Step 2: Calling auth Edge Function...')
+      console.log('Auth API URL:', AUTH_API)
+      
       const response = await fetch(AUTH_API, {
         method: 'POST',
         headers: {
@@ -106,18 +123,22 @@ export function useAuth() {
         }
       })
 
+      console.log('📡 Auth response status:', response.status)
+
       if (!response.ok) {
         const errorText = await response.text()
+        console.error('❌ Auth failed:', response.status, errorText)
         throw new Error(`Authentication failed: ${response.status} ${errorText}`)
       }
 
       const { token, expiresIn } = await response.json()
       
       if (!token) {
+        console.error('❌ No token in response')
         throw new Error('No token returned from auth endpoint')
       }
 
-      console.log('Got JWT token, expires in', expiresIn, 'seconds')
+      console.log('✅ Got JWT token, expires in', expiresIn, 'seconds')
 
       // Step 3: Store JWT token securely
       const authData: AuthData = {
@@ -127,11 +148,17 @@ export function useAuth() {
       
       await setSecret({ value: JSON.stringify(authData) })
       setJwtToken(token)
+      console.log('💾 Token stored securely')
       
       return token
       
     } catch (error) {
-      console.error('Authentication error:', error)
+      console.error('❌ Authentication error:', error)
+      if (error instanceof Error) {
+        console.error('Error name:', error.name)
+        console.error('Error message:', error.message)
+        console.error('Error stack:', error.stack)
+      }
       throw error
     } finally {
       setIsLoading(false)
