@@ -4,12 +4,10 @@
   "scopes": [
     "user_settings:read",
     "openid",
-    "profile",
-    "email",
-    "offline_access"
+    "profile"
   ],
   "handle": "stylesync",
   "privacy_policy_url": "https://www.stylesync.com/privacy",
   "terms_url": "https://www.stylesync.com/terms",
-  "trusted_domains": ["https://fhyisvyhahqxryanjnby.supabase.co"]
+  "trusted_domains": ["fhyisvyhahqxryanjnby.supabase.co"]
 }
