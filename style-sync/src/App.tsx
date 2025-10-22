@@ -49,9 +49,17 @@ export function App() {
       
     } catch (error) {
       console.error('❌ App: Error checking profile:', error)
+      console.error('❌ App: Error type:', typeof error)
+      console.error('❌ App: Error constructor:', error?.constructor?.name)
+      
       if (error instanceof Error) {
-        console.error('Error details:', error.message, error.stack)
+        console.error('❌ App: Error name:', error.name)
+        console.error('❌ App: Error message:', error.message)
+        console.error('❌ App: Error stack:', error.stack)
+      } else {
+        console.error('❌ App: Non-Error object:', JSON.stringify(error, null, 2))
       }
+      
       setError('Failed to load profile. Please try again.')
       setHasProfile(false)
     } finally {
