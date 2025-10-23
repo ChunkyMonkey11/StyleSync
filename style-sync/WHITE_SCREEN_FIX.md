@@ -1,140 +1,61 @@
-# White Screen Fix - Applied Changes
+## Problem
 
-## Date: October 18, 2025
+The Shop Mini when run on the shop platform would always result in a white screen.
 
-## Issues Identified
+- The tab that lays above a developing shop app to reload and other features was not appearing
+- No rendering of the root App.tsx
+- Issue persisted no matter what Cursor had attempted to try
 
-### 1. **Tailwind CSS Not Loading** ❌
-**Problem:** `src/index.css` was missing the Tailwind import, causing all Tailwind classes to be ignored. This resulted in invisible UI elements (white screen).
+## Solution
 
-**Fix Applied:**
-```css
-@import "@shopify/shop-minis-react/styles";
-@import "tailwindcss";  // ← ADDED THIS LINE
-```
-
-### 2. **Wrong Shop Minis Admin API Key** ❌
-**Problem:** The Supabase Edge Function was using the wrong API key (`shpmns_siNeGRfVBEPKzdQHTeL52YfeorfcZVL9`), causing 401 authentication errors.
-
-**Fix Applied:**
-- Updated Supabase secret to use: `603f76f733e6b01054d10498c5cfb8bb`
-- Redeployed `auth` Edge Function with new key
-
-## Changes Made
-
-### File: `src/index.css`
-```diff
- @import "@shopify/shop-minis-react/styles";
-+@import "tailwindcss";
-```
-
-### Supabase Secrets
-```bash
-npx supabase secrets set SHOP_MINIS_ADMIN_API_KEY="603f76f733e6b01054d10498c5cfb8bb"
-```
-
-### Edge Functions
-```bash
-npx supabase functions deploy auth --no-verify-jwt
-```
-
-## Testing Instructions
-
-### 1. Clear Browser Cache (if testing in browser)
-```bash
-# Hard refresh your browser
-# Chrome/Edge: Ctrl+Shift+R (Windows) or Cmd+Shift+R (Mac)
-# Or clear cache in DevTools
-```
-
-### 2. Test on Mobile via QR Code
-
-```bash
-cd /Users/revantpatel/StyleSync/style-sync
-npm start
-# Press 'q' to show QR code
-# Scan with your phone
-```
-
-### 3. Expected Behavior
-
-**Before Fix:**
-- White screen on phone
-- 401 errors in logs
-- No UI visible
-
-**After Fix:**
-- Loading screen appears
-- Auth succeeds (or shows proper error message)
-- Onboarding page or Main app loads
-- Tailwind styles are visible
-
-## If Still White Screen
-
-### Check 1: Verify Tailwind is working
-Look for these classes rendering properly in DevTools:
-- `flex`
-- `items-center`
-- `text-lg`
-- `bg-blue-500`
-
-If these don't apply styles, Tailwind isn't loading.
-
-### Check 2: Check auth logs
-```bash
-npx supabase functions logs auth --follow
-```
-
-Should NOT see 401 errors anymore.
-
-### Check 3: Check browser console
-Open DevTools and look for:
-- Import errors
-- Network failures
-- React errors
-
-### Check 4: Verify API key is correct
-The key `603f76f733e6b01054d10498c5cfb8bb` should be in your `.env` file as `VITE_SHOP_MINIS_ADMIN_API_KEY`.
-
-If you need to use the other key instead:
-```bash
-npx supabase secrets set SHOP_MINIS_ADMIN_API_KEY="shpmns_siNeGRfVBEPKzdQHTeL52YfeorfcZVL9"
-npx supabase functions deploy auth --no-verify-jwt
-```
-
-## Additional Notes
-
-### Why Tailwind v4 Import?
-Tailwind v4 uses a new CSS-first approach. The `@import "tailwindcss"` directive:
-- Loads Tailwind's base styles
-- Enables all utility classes
-- Processes your Tailwind configuration from `package.json`
-
-### Why the API Key Change?
-Shop Minis uses two types of keys:
-1. **Platform Key** (shpmns_*): For Shop platform operations
-2. **Admin API Key**: For verifying user tokens
-
-The Admin API specifically requires the hex key, not the platform key.
-
-## Verification Checklist
-
-- [x] Tailwind CSS import added to `index.css`
-- [x] Shop Minis Admin API key updated in Supabase
-- [x] Auth Edge Function redeployed
-- [ ] Test on mobile device via QR code
-- [ ] Verify loading screen appears
-- [ ] Verify auth succeeds or shows proper error
-- [ ] Verify UI styles are visible
-
-## Next Steps
-
-1. Test the app by scanning the QR code
-2. Check if the white screen is resolved
-3. If authentication still fails, we may need to verify which API key the Shop Minis Admin API actually expects
-4. If UI still invisible, check that `@tailwindcss/vite` plugin is properly configured in your build setup
+- Sent the shop development team a zip file that contained the style-sync app without the node modules
+- They sent us back this feedback from Steve:
 
 ---
 
-**Summary:** Added Tailwind CSS import and fixed authentication API key. App should now load properly with visible UI and working authentication.
+**Steve's Feedback:**
 
+Ok so there's a couple of issues:
+
+1. **manifest.json scopes includes email and offline_access which do not exist and should be removed.**
+
+```json
+"scopes": [
+    "user_settings:read",
+    "openid",
+    "profile",
+    "email",
+    "offline_access"
+],
+```
+
+Should be:
+
+```json
+"scopes": [
+    "user_settings:read",
+    "openid",
+    "profile"
+],
+```
+
+2. **manifest.json trusted_domains includes https:// which should be removed.**
+
+```json
+"trusted_domains": ["https://fhyisvyhahqxryanjnby.supabase.co"]
+```
+
+Should be:
+
+```json
+"trusted_domains": ["fhyisvyhahqxryanjnby.supabase.co"]
+```
+
+You can run the following command to validate the manifest is correct:
+```bash
+npx shop-minis validate-manifest
+```
+
+3. **You need to delete your vite.config.mjs file** - it is no longer required and causes issues when included.
+
+After doing that, you should be able to run the mini again and it will work. 
