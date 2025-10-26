@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { OnboardingPage } from './pages/OnboardingPage'
 import { MainApp } from './pages/MainApp'
 import { useAuth } from './hooks/useAuth'
@@ -9,9 +9,13 @@ export function App() {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const { getValidToken } = useAuth()
+  const hasCheckedProfile = useRef(false)
 
   useEffect(() => {
-    checkUserProfile()
+    if (!hasCheckedProfile.current) {
+      hasCheckedProfile.current = true
+      checkUserProfile()
+    }
   }, [])
 
   const checkUserProfile = async () => {
@@ -37,6 +41,7 @@ export function App() {
 
       console.log('📡 App: check-profile response status:', response.status)
 
+      //This line currently errors out because the response is not ok
       if (!response.ok) {
         const errorText = await response.text()
         console.error('❌ App: check-profile failed:', response.status, errorText)

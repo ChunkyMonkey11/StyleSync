@@ -11,6 +11,7 @@ const AUTH_API = 'https://fhyisvyhahqxryanjnby.supabase.co/functions/v1/auth'
 interface AuthData {
   token: string      // JWT token for API calls
   expiresAt: number  // Timestamp when token expires
+  shopMiniToken: string // Shop Mini token for consistency
 }
 
 /**
@@ -100,15 +101,36 @@ export function useAuth() {
     setIsLoading(true)
     
     try {
-      // Step 1: Get Shop Mini token from SDK
-      console.log('📱 Step 1: Generating Shop Mini token...')
-      const result = await generateUserToken()
-      if (!result.data?.token) {
-        console.error('❌ Failed to generate Shop Mini token:', result)
-        throw new Error('Failed to generate Shop Mini token')
+      // Step 1: Get Shop Mini token from SDK or reuse stored one
+      console.log('📱 Step 1: Getting Shop Mini token...')
+      
+      // Check if we have a stored Shop Mini token
+      const stored = await getSecret()
+      let shopMiniToken: string | undefined
+      
+      if (stored) {
+        try {
+          const data: AuthData = JSON.parse(stored)
+          if (data.shopMiniToken) {
+            console.log('♻️ Reusing stored Shop Mini token for consistent hash')
+            shopMiniToken = data.shopMiniToken
+          }
+        } catch (parseError) {
+          console.log('⚠️ Could not parse stored data')
+        }
       }
       
-      const shopMiniToken = result.data.token
+      // If no stored token, generate a new one
+      if (!shopMiniToken) {
+        const result = await generateUserToken()
+        if (!result.data?.token) {
+          console.error('❌ Failed to generate Shop Mini token:', result)
+          throw new Error('Failed to generate Shop Mini token')
+        }
+        shopMiniToken = result.data.token
+        console.log('✅ Generated new Shop Mini token')
+      }
+
       console.log('✅ Got Shop Mini token, exchanging for JWT...')
 
       // Step 2: Exchange Shop Mini token for JWT via auth Edge Function
@@ -143,7 +165,8 @@ export function useAuth() {
       // Step 3: Store JWT token securely
       const authData: AuthData = {
         token,
-        expiresAt: Date.now() + (expiresIn * 1000)  // Convert seconds to milliseconds
+        expiresAt: Date.now() + (expiresIn * 1000),  // Convert seconds to milliseconds
+        shopMiniToken  // Store for consistency
       }
       
       await setSecret({ value: JSON.stringify(authData) })

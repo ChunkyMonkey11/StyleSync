@@ -49,9 +49,16 @@ Deno.serve(async (req) => {
     
     // Verify the JWT token and extract the payload
     // Payload contains: { publicId, userState, exp, iat }
-    const payload = await verifyJWT(token, jwtSecret)
+    let payload;
+    try {
+      payload = await verifyJWT(token, jwtSecret);
+    } catch (error) {
+      console.error('JWT verification failed:', error);
+      return errorResponse('Invalid or expired token', 401);
+    }
+    
     if (!payload) {
-      return errorResponse('Invalid or expired token', 401)
+      return errorResponse('Invalid or expired token', 401);
     }
     
     // Now we know the authenticated user's publicId
