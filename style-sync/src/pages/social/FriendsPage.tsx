@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Button, Input, Card } from '@shopify/shop-minis-react'
-import { useFriendRequests } from '../hooks/useFriendRequests'
+import { useFriendRequests } from '../../hooks/useFriendRequests'
 
 interface FriendsPageProps {
     onBack: () => void

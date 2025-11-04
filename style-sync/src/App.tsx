@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { OnboardingPage } from './pages/OnboardingPage'
+import { OnboardingPage } from './pages/auth/OnboardingPage'
 import { MainApp } from './pages/MainApp'
 import { useAuth } from './hooks/useAuth'
 // No Shopify initialization needed for Shop Minis React

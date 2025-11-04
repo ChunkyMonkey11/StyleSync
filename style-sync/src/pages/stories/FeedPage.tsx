@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useCurrentUser, List, Button } from '@shopify/shop-minis-react'
-import { PostCard } from '../components/PostCard'
-import { useAuth } from '../hooks/useAuth'
+import { PostCard } from '../../components/PostCard'
+import { useAuth } from '../../hooks/useAuth'
 
 interface FeedPost {
   id: string

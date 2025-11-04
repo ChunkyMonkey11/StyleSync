@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useCurrentUser, Button, Input, Card } from '@shopify/shop-minis-react'
-import { useAuth } from '../hooks/useAuth'
+import { useAuth } from '../../hooks/useAuth'
 
 interface UserProfile {
     id: string

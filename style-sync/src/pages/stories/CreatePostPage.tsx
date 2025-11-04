@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useCurrentUser, Button, Input, Card } from '@shopify/shop-minis-react'
-import { useAuth } from '../hooks/useAuth'
+import { useAuth } from '../../hooks/useAuth'
 
 interface CreatePostPageProps {
   onBack: () => void
