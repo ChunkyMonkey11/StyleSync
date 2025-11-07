@@ -2,7 +2,7 @@
 // This hook handles authentication flow with Supabase Edge Functions
 
 import { useGenerateUserToken, useSecureStorage } from '@shopify/shop-minis-react'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState, useRef } from 'react'
 
 // The auth Edge Function endpoint
 const AUTH_API = 'https://fhyisvyhahqxryanjnby.supabase.co/functions/v1/auth'
@@ -31,6 +31,9 @@ export function useAuth() {
   // State
   const [jwtToken, setJwtToken] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
+  
+  // Cache for in-flight token fetch promise to prevent duplicate concurrent requests
+  const tokenFetchPromiseRef = useRef<Promise<string> | null>(null)
 
   // ============================================
   // LOAD STORED TOKEN ON MOUNT
@@ -77,9 +80,35 @@ export function useAuth() {
    * - Returns existing token if still valid
    * - Fetches new token if expired or missing
    * - Automatically stores new tokens securely
+   * - Prevents duplicate concurrent fetches by caching the in-flight promise
    */
   const getValidToken = useCallback(async (): Promise<string> => {
-    // Check if current token is still valid
+    // FIRST: Check if there's already a token fetch in progress (synchronous check)
+    // This must happen before any async operations to prevent race conditions
+    if (tokenFetchPromiseRef.current) {
+      console.log('♻️ Reusing in-flight token fetch')
+      return tokenFetchPromiseRef.current
+    }
+
+    // SECOND: Check secure storage FIRST (shared cache - all hook instances share this)
+    // This ensures that if App.tsx already fetched a token, useProductFeedSync can reuse it
+    const stored = await getSecret()
+    if (stored) {
+      try {
+        const data: AuthData = JSON.parse(stored)
+        // If expires in more than 1 day, use existing token from storage
+        if (data.expiresAt > Date.now() + 86400000) {
+          console.log('✅ Using existing JWT token from storage')
+          // Update this instance's in-memory state for consistency
+          setJwtToken(data.token)
+          return data.token
+        }
+      } catch (parseError) {
+        console.log('⚠️ Token parse error, fetching new token')
+      }
+    }
+
+    // THIRD: Check in-memory state (fallback, but storage check above should catch it)
     if (jwtToken) {
       const stored = await getSecret()
       if (stored) {
@@ -96,10 +125,19 @@ export function useAuth() {
       }
     }
 
+    // Check again after async operation (in case another call started while we were checking)
+    if (tokenFetchPromiseRef.current) {
+      console.log('♻️ Reusing in-flight token fetch (after async check)')
+      return tokenFetchPromiseRef.current
+    }
+
     // Need to get a new token
     console.log('🔄 Fetching new JWT token...')
-    setIsLoading(true)
     
+    // Create and cache the fetch promise IMMEDIATELY (before any async work)
+    // This must be set synchronously to prevent race conditions
+    tokenFetchPromiseRef.current = (async () => {
+      setIsLoading(true)
     try {
       // Step 1: Get Shop Mini token from SDK or reuse stored one
       console.log('📱 Step 1: Getting Shop Mini token...')
@@ -185,7 +223,12 @@ export function useAuth() {
       throw error
     } finally {
       setIsLoading(false)
+        // Clear the cached promise when done (success or failure)
+        tokenFetchPromiseRef.current = null
     }
+    })()
+
+    return tokenFetchPromiseRef.current
   }, [jwtToken, generateUserToken, getSecret, setSecret])
 
   // ============================================
@@ -199,6 +242,8 @@ export function useAuth() {
     console.log('Clearing authentication')
     await removeSecret()
     setJwtToken(null)
+    // Clear any in-flight token fetch promise
+    tokenFetchPromiseRef.current = null
   }, [removeSecret])
 
   // Return hook interface

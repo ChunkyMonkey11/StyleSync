@@ -19,9 +19,19 @@ interface JWTHeader {
  * Encode data to base64url format (JWT standard)
  */
 function base64UrlEncode(data: string | Uint8Array): string {
-  const base64 = typeof data === 'string' 
-    ? btoa(data)
-    : btoa(String.fromCharCode(...data));
+  let base64: string;
+  if (typeof data === 'string') {
+    base64 = btoa(data);
+  } else {
+    // Convert Uint8Array to binary string efficiently
+    const chunkSize = 8192;
+    let binary = '';
+    for (let i = 0; i < data.length; i += chunkSize) {
+      const chunk = data.slice(i, i + chunkSize);
+      binary += String.fromCharCode(...chunk);
+    }
+    base64 = btoa(binary);
+  }
   
   return base64
     .replace(/=/g, '')
@@ -39,6 +49,23 @@ function base64UrlDecode(str: string): string {
     .padEnd(str.length + (4 - str.length % 4) % 4, '=');
   
   return atob(base64);
+}
+
+/**
+ * Decode base64url to Uint8Array (for binary data like signatures)
+ */
+function base64UrlDecodeToBytes(str: string): Uint8Array {
+  const base64 = str
+    .replace(/-/g, '+')
+    .replace(/_/g, '/')
+    .padEnd(str.length + (4 - str.length % 4) % 4, '=');
+  
+  const binaryString = atob(base64);
+  const bytes = new Uint8Array(binaryString.length);
+  for (let i = 0; i < binaryString.length; i++) {
+    bytes[i] = binaryString.charCodeAt(i);
+  }
+  return bytes;
 }
 
 /**
@@ -123,9 +150,9 @@ export async function verifyJWT(
   // Verify signature
   const key = await importSecretKey(secretKey);
   const encoder = new TextEncoder();
-  const signatureBytes = new Uint8Array(
-    base64UrlDecode(encodedSignature).split('').map(c => c.charCodeAt(0))
-  );
+  
+  // Decode base64url signature directly to Uint8Array (more reliable for binary data)
+  const signatureBytes = base64UrlDecodeToBytes(encodedSignature);
   
   const isValid = await crypto.subtle.verify(
     'HMAC',

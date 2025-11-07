@@ -4,7 +4,13 @@
   "scopes": [
     "user_settings:read",
     "openid",
-    "profile"
+    "profile",
+    "orders",
+    "product_list:read",
+    "product_list:write",
+    "products:recent:read",
+    "products:recommendations:read",
+    "shops:follows:read"
   ],
   "handle": "stylesync",
   "privacy_policy_url": "https://www.stylesync.com/privacy",

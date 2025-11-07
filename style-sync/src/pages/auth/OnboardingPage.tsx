@@ -159,7 +159,7 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps) {
                 <form onSubmit={handleSubmit}>
                     {/* Header */}
                     <div className="text-center mb-6">
-                        <h1 className="text-2xl font-bold mb-2">Welcome to StyleSync</h1>
+                        <h1 className="text-2xl font-bold mb-2">Welcome to Style$ync</h1>
                         <p className="text-gray-600">Let's set up your style profile</p>
                     </div>
                     

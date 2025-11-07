@@ -97,6 +97,7 @@ import { useCurrentUser } from '@shopify/shop-minis-react'
 import { FriendsPage } from './social/FriendsPage'
 import { ProfilePage } from './user_profile/ProfilePage'
 import { ProfileEditPage } from './user_profile/ProfileEditPage'
+import { FeedPage } from './feeds/FeedPage'
 import { useAuth } from '../hooks/useAuth'
 
 /**
@@ -147,7 +148,7 @@ export function MainApp() {
      * Current view/page being displayed.
      * Controls which component is rendered based on user navigation.
      */
-    const [currentView, setCurrentView] = useState<'main' | 'friends' | 'profile' | 'profile-edit'>('main')
+    const [currentView, setCurrentView] = useState<'main' | 'friends' | 'profile' | 'profile-edit' | 'feeds'>('main')
     
     /**
      * User profile data fetched from backend.
@@ -284,6 +285,14 @@ export function MainApp() {
             />
         )
     }
+    /**
+     * Feeds Page View
+     * Displays the pages of the people users follow so they can see their style.
+     */
+    if (currentView === 'feeds') {
+        return <FeedPage onBack={() => setCurrentView('main')} />
+    }
+
 
     // ============================================
     // MAIN VIEW STATES
@@ -297,7 +306,7 @@ export function MainApp() {
         return (
             <div className="p-4 max-w-md mx-auto">
                 <div className="text-center mb-6">
-                    <h1 className="text-2xl font-bold mb-2">StyleSync</h1>
+                    <h1 className="text-2xl font-bold mb-2">Style$ync</h1>
                     <p className="text-gray-600">Loading your profile...</p>
                 </div>
                 <div className="space-y-4">
@@ -320,7 +329,7 @@ export function MainApp() {
         return (
             <div className="p-4 max-w-md mx-auto">
                 <div className="text-center mb-6">
-                    <h1 className="text-2xl font-bold mb-2">StyleSync</h1>
+                    <h1 className="text-2xl font-bold mb-2">Style$ync</h1>
                     <p className="text-gray-600">Welcome back, {currentUser?.displayName || 'User'}!</p>
                 </div>
                 <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-center">
@@ -346,7 +355,7 @@ export function MainApp() {
         <div className="p-4 max-w-md mx-auto">
             {/* Page Header */}
             <div className="text-center mb-6">
-                <h1 className="text-2xl font-bold mb-2">StyleSync</h1>
+                <h1 className="text-2xl font-bold mb-2">Style$ync</h1>
                 <p className="text-gray-600">Welcome back, {currentUser?.displayName || 'User'}!</p>
             </div>
 
@@ -417,6 +426,18 @@ export function MainApp() {
                         </div>
                     </div>
                 )}
+
+                {/* Feeds Card - Quick access to feeds */}
+                <div className="bg-white p-4 rounded-lg border shadow-sm">
+                    <h2 className="font-semibold mb-2">Feeds</h2>
+                    <p className="text-sm text-gray-600 mb-3">See your friends' style!</p>
+                    <button 
+                        onClick={() => setCurrentView('feeds')}
+                        className="w-full bg-purple-600 text-white py-2 px-4 rounded-lg hover:bg-purple-700 transition-colors"
+                    >
+                        View Feeds
+                    </button>
+                </div>
 
                 {/* Friends Card - Quick access to friends management */}
                 <div className="bg-white p-4 rounded-lg border shadow-sm">
