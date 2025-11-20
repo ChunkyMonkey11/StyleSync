@@ -22,7 +22,8 @@ interface ProfileEditPageProps {
 
 export function ProfileEditPage({ onBack, onSave }: ProfileEditPageProps) {
     const { currentUser } = useCurrentUser()
-    const { getValidToken } = useAuth()
+    const { getValidToken, clearAuth } = useAuth()
+    const isDebugBuild = import.meta.env.MODE !== 'production'
     
     // Form state
     const [username, setUsername] = useState('')
@@ -85,14 +86,17 @@ export function ProfileEditPage({ onBack, onSave }: ProfileEditPageProps) {
         }
     }
 
-    const validateUsername = (value: string) => {
-        if (!value) return 'Username is required'
-        if (value.length < 3) return 'Username must be at least 3 characters'
-        if (!/^[a-z0-9_]+$/.test(value)) return 'Only lowercase letters, numbers, and underscores'
-        return null
+    // DEBUG ONLY: clears cached auth to force a fresh JWT. Remove before production.
+    const handleDebugClearAuth = async () => {
+        try {
+            await clearAuth()
+            alert('Auth cache cleared. Re-open any screen that requests data to re-authenticate.')
+        } catch (error) {
+            console.error('Error clearing auth cache:', error)
+        }
     }
-    
-    const toggleStylePreference = (style: string) => {
+
+        const toggleStylePreference = (style: string) => {
         setStylePreferences(prev => 
             prev.includes(style) 
                 ? prev.filter(s => s !== style)
@@ -140,12 +144,6 @@ export function ProfileEditPage({ onBack, onSave }: ProfileEditPageProps) {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
-        
-        const usernameError = validateUsername(username)
-        if (usernameError) {
-            setErrors({ username: usernameError })
-            return
-        }
         
         setIsSaving(true)
         setErrors({})
@@ -232,6 +230,15 @@ export function ProfileEditPage({ onBack, onSave }: ProfileEditPageProps) {
                     ← Back
                 </button>
                 <h1 className="text-2xl font-bold">Edit Profile</h1>
+                {isDebugBuild && (
+                    <button
+                        type="button"
+                        onClick={handleDebugClearAuth}
+                        className="ml-auto text-xs text-red-500 underline"
+                    >
+                        Clear Auth (Debug)
+                    </button>
+                )}
             </div>
 
             <Card className="p-6">
@@ -241,14 +248,15 @@ export function ProfileEditPage({ onBack, onSave }: ProfileEditPageProps) {
                         <label className="block text-sm font-medium mb-1">Username *</label>
                         <Input
                             value={username}
-                            onChange={(e) => setUsername(e.target.value)}
+                            readOnly
+                            disabled
                             placeholder="your_username"
                             className="w-full"
-                            aria-invalid={!!errors.username}
+                            aria-readonly="true"
                         />
-                        {errors.username && (
-                            <p className="text-sm text-red-600 mt-1">{errors.username}</p>
-                        )}
+                        <p className="text-xs text-gray-500 mt-1">
+                            Usernames are permanent. Contact support if you need to change it.
+                        </p>
                     </div>
                     
                     {/* Bio Input */}

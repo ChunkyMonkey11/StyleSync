@@ -9,6 +9,125 @@ import {
 } from '@shopify/shop-minis-react'
 import { useAuth } from './useAuth'
 
+const INITIAL_PAGE_SIZE = 20
+const PAGINATION_PAGE_SIZE = 20
+const MAX_PRODUCTS_PER_SOURCE = 100
+const MAX_LISTS = 60
+const MAX_ORDERS = 60
+const MAX_RECENT_PRODUCTS = 100
+const MAX_RECOMMENDED_PRODUCTS = 100
+const MAX_FOLLOWED_SHOPS = 120
+
+interface PageInfoLike {
+  hasNextPage?: boolean
+  endCursor?: string | null
+}
+
+type LoadMoreFn = ((variables?: { first?: number; after?: string | null }) => Promise<any>) | undefined
+
+const getPageInfo = (result: any): PageInfoLike | undefined =>
+  result?.pageInfo ??
+  result?.page_info ??
+  result?.pagination ??
+  result?.paginationInfo ??
+  result?.pageDetails
+
+const getLoadMoreFn = (result: any): LoadMoreFn =>
+  result?.loadMore ??
+  result?.fetchMore ??
+  result?.fetchNextPage ??
+  result?.loadNext ??
+  result?.next ??
+  result?.nextPage
+
+function useAutoPagination<T>({
+  sourceName,
+  items,
+  loading,
+  pageInfo,
+  loadMore,
+  maxItems,
+  pageSize
+}: {
+  sourceName: string
+  items: T[] | null | undefined
+  loading: boolean
+  pageInfo?: PageInfoLike
+  loadMore?: LoadMoreFn
+  maxItems: number
+  pageSize: number
+}) {
+  const [isInFlight, setIsInFlight] = useState(false)
+  const lastCursorRef = useRef<string | null>(null)
+
+  useEffect(() => {
+    if (loading || isInFlight) {
+      return
+    }
+
+    if (typeof loadMore !== 'function') {
+      return
+    }
+
+    const currentCount = Array.isArray(items) ? items.length : 0
+    if (currentCount >= maxItems) {
+      return
+    }
+
+    if (!pageInfo?.hasNextPage) {
+      return
+    }
+
+    const cursor = pageInfo?.endCursor ?? null
+    if (lastCursorRef.current === cursor) {
+      return
+    }
+
+    let isMounted = true
+    setIsInFlight(true)
+    lastCursorRef.current = cursor
+
+    loadMore({
+      after: cursor ?? undefined,
+      first: Math.min(pageSize, maxItems - currentCount)
+    })
+      .catch(error => {
+        console.error(`Error auto-paginating ${sourceName}:`, error)
+      })
+      .finally(() => {
+        if (isMounted) {
+          setIsInFlight(false)
+        }
+      })
+
+    return () => {
+      isMounted = false
+    }
+  }, [
+    items,
+    loading,
+    pageInfo?.hasNextPage,
+    pageInfo?.endCursor,
+    loadMore,
+    maxItems,
+    pageSize,
+    sourceName,
+    isInFlight
+  ])
+
+  const totalCount = Array.isArray(items) ? items.length : 0
+  const fullyLoaded =
+    totalCount >= maxItems ||
+    !pageInfo?.hasNextPage ||
+    typeof loadMore !== 'function'
+
+  return {
+    isLoading: loading,
+    isPaginating: isInFlight,
+    isComplete: fullyLoaded && !loading && !isInFlight
+  }
+}
+
 interface UseProductFeedSyncReturn {
   isSyncing: boolean
   error: string | null
@@ -26,13 +145,96 @@ export function useProductFeedSync(): UseProductFeedSyncReturn {
   const hasSyncedRef = useRef(false)
   const lastSyncTimeRef = useRef<number>(0)
 
-  // Fetch data from all Shopify hooks (reduced first to 20 to avoid "too high" errors)
-  const { productLists, loading: listsLoading, error: listsError } = useProductLists({ first: 20 })
-  const { products: savedProducts, loading: savedLoading, error: savedError } = useSavedProducts({ first: 20 })
-  const { orders, loading: ordersLoading, error: ordersError } = useOrders({ first: 20 })
-  const { products: recentProducts, loading: recentLoading, error: recentError } = useRecentProducts({ first: 20 })
-  const { shops: followedShops, loading: shopsLoading, error: shopsError } = useFollowedShops({ first: 20 })
-  const { products: recommendedProducts, loading: recommendedLoading, error: recommendedError } = useRecommendedProducts({ first: 20 })
+  // Fetch data from all Shopify hooks (auto-paginated below)
+  const productListsResult = useProductLists({ first: INITIAL_PAGE_SIZE })
+  const { productLists, loading: listsLoading, error: listsError } = productListsResult
+  const productListsPageInfo = getPageInfo(productListsResult)
+  const loadMoreProductLists = getLoadMoreFn(productListsResult)
+
+  const savedProductsResult = useSavedProducts({ first: INITIAL_PAGE_SIZE })
+  const { products: savedProducts, loading: savedLoading, error: savedError } = savedProductsResult
+  const savedProductsPageInfo = getPageInfo(savedProductsResult)
+  const loadMoreSavedProducts = getLoadMoreFn(savedProductsResult)
+
+  const ordersResult = useOrders({ first: INITIAL_PAGE_SIZE })
+  const { orders, loading: ordersLoading, error: ordersError } = ordersResult
+  const ordersPageInfo = getPageInfo(ordersResult)
+  const loadMoreOrders = getLoadMoreFn(ordersResult)
+
+  const recentProductsResult = useRecentProducts({ first: INITIAL_PAGE_SIZE })
+  const { products: recentProducts, loading: recentLoading, error: recentError } = recentProductsResult
+  const recentProductsPageInfo = getPageInfo(recentProductsResult)
+  const loadMoreRecentProducts = getLoadMoreFn(recentProductsResult)
+
+  const followedShopsResult = useFollowedShops({ first: INITIAL_PAGE_SIZE })
+  const { shops: followedShops, loading: shopsLoading, error: shopsError } = followedShopsResult
+  const followedShopsPageInfo = getPageInfo(followedShopsResult)
+  const loadMoreFollowedShops = getLoadMoreFn(followedShopsResult)
+
+  const recommendedProductsResult = useRecommendedProducts({ first: INITIAL_PAGE_SIZE })
+  const { products: recommendedProducts, loading: recommendedLoading, error: recommendedError } = recommendedProductsResult
+  const recommendedProductsPageInfo = getPageInfo(recommendedProductsResult)
+  const loadMoreRecommendedProducts = getLoadMoreFn(recommendedProductsResult)
+
+  const productListsPagination = useAutoPagination({
+    sourceName: 'productLists',
+    items: productLists,
+    loading: listsLoading,
+    pageInfo: productListsPageInfo,
+    loadMore: loadMoreProductLists,
+    maxItems: MAX_LISTS,
+    pageSize: PAGINATION_PAGE_SIZE
+  })
+
+  const savedProductsPagination = useAutoPagination({
+    sourceName: 'savedProducts',
+    items: savedProducts,
+    loading: savedLoading,
+    pageInfo: savedProductsPageInfo,
+    loadMore: loadMoreSavedProducts,
+    maxItems: MAX_PRODUCTS_PER_SOURCE,
+    pageSize: PAGINATION_PAGE_SIZE
+  })
+
+  const ordersPagination = useAutoPagination({
+    sourceName: 'orders',
+    items: orders,
+    loading: ordersLoading,
+    pageInfo: ordersPageInfo,
+    loadMore: loadMoreOrders,
+    maxItems: MAX_ORDERS,
+    pageSize: PAGINATION_PAGE_SIZE
+  })
+
+  const recentProductsPagination = useAutoPagination({
+    sourceName: 'recentProducts',
+    items: recentProducts,
+    loading: recentLoading,
+    pageInfo: recentProductsPageInfo,
+    loadMore: loadMoreRecentProducts,
+    maxItems: MAX_RECENT_PRODUCTS,
+    pageSize: PAGINATION_PAGE_SIZE
+  })
+
+  const recommendedProductsPagination = useAutoPagination({
+    sourceName: 'recommendedProducts',
+    items: recommendedProducts,
+    loading: recommendedLoading,
+    pageInfo: recommendedProductsPageInfo,
+    loadMore: loadMoreRecommendedProducts,
+    maxItems: MAX_RECOMMENDED_PRODUCTS,
+    pageSize: PAGINATION_PAGE_SIZE
+  })
+
+  const followedShopsPagination = useAutoPagination({
+    sourceName: 'followedShops',
+    items: followedShops,
+    loading: shopsLoading,
+    pageInfo: followedShopsPageInfo,
+    loadMore: loadMoreFollowedShops,
+    maxItems: MAX_FOLLOWED_SHOPS,
+    pageSize: PAGINATION_PAGE_SIZE
+  })
 
   // Helper function to filter out mock/free products (inspired by old Collector)
   const isValidProduct = (product: any): boolean => {
@@ -70,9 +272,27 @@ export function useProductFeedSync(): UseProductFeedSyncReturn {
         return
       }
 
-      // Check if any hooks are still loading
-      if (listsLoading || savedLoading || ordersLoading || recentLoading || shopsLoading || recommendedLoading) {
-        console.log('⏳ Still loading, waiting...')
+      const paginationStates = [
+        { name: 'productLists', state: productListsPagination },
+        { name: 'savedProducts', state: savedProductsPagination },
+        { name: 'orders', state: ordersPagination },
+        { name: 'recentProducts', state: recentProductsPagination },
+        { name: 'recommendedProducts', state: recommendedProductsPagination },
+        { name: 'followedShops', state: followedShopsPagination }
+      ]
+
+      const isStillLoading = paginationStates.some(
+        ({ state }) => state.isLoading || state.isPaginating
+      )
+
+      if (isStillLoading) {
+        console.log('⏳ Still loading/paginating, waiting...')
+        return
+      }
+
+      const allPaginationComplete = paginationStates.every(({ state }) => state.isComplete)
+      if (!allPaginationComplete) {
+        console.log('⏳ Waiting for pagination to complete...')
         return
       }
 
@@ -116,17 +336,33 @@ export function useProductFeedSync(): UseProductFeedSyncReturn {
         // Aggregate products from all sources (no source tracking - just collect all products)
         const aggregatedProducts: Array<{
           product: any
+          source?: string
+          attributes?: any
         }> = []
+        const seenProductIds = new Set<string>()
+        let newUniqueProductsAdded = 0
+        let savedValidCount = 0
+        let listsValidCount = 0
+        let ordersValidCount = 0
+        let recentValidCount = 0
+        let recommendedValidCount = 0
 
         // 1. Products from saved products (handle null case)
         if (savedProducts && Array.isArray(savedProducts) && savedProducts.length > 0) {
           console.log('📦 Processing saved products:', savedProducts.length)
           const validSaved = savedProducts.filter(isValidProduct)
+          savedValidCount = validSaved.length
           console.log('✅ Valid saved products after filter:', validSaved.length)
           validSaved.forEach(product => {
-            aggregatedProducts.push({
-              product
-            })
+            if (!seenProductIds.has(product.id)) {
+              seenProductIds.add(product.id)
+              aggregatedProducts.push({
+                product,
+                source: 'shopify',
+                attributes: { origin: { hook: 'useSavedProducts' } }
+              })
+              newUniqueProductsAdded += 1
+            }
           })
         } else {
           console.log('⚠️ No saved products or empty array')
@@ -139,11 +375,18 @@ export function useProductFeedSync(): UseProductFeedSyncReturn {
             if (list.products && list.products.length > 0) {
               console.log(`  📋 List "${list.name}":`, list.products.length, 'products')
               const validListProducts = list.products.filter(isValidProduct)
+              listsValidCount += validListProducts.length
               console.log(`  ✅ Valid products in list:`, validListProducts.length)
               validListProducts.forEach(product => {
-                aggregatedProducts.push({
-                  product
-                })
+                if (!seenProductIds.has(product.id)) {
+                  seenProductIds.add(product.id)
+                  aggregatedProducts.push({
+                    product,
+                    source: 'shopify',
+                    attributes: { origin: { hook: 'useProductLists', listName: list.name } }
+                  })
+                  newUniqueProductsAdded += 1
+                }
               })
             }
           })
@@ -158,9 +401,17 @@ export function useProductFeedSync(): UseProductFeedSyncReturn {
             if (order.lineItems && order.lineItems.length > 0) {
               order.lineItems.forEach(item => {
                 if (item.product && isValidProduct(item.product)) {
-                  aggregatedProducts.push({
-                    product: item.product
-                  })
+                  ordersValidCount += 1
+                  const product = item.product
+                  if (!seenProductIds.has(product.id)) {
+                    seenProductIds.add(product.id)
+                    aggregatedProducts.push({
+                      product,
+                      source: 'shopify',
+                      attributes: { origin: { hook: 'useOrders', orderId: (order as any)?.id ?? null } }
+                    })
+                    newUniqueProductsAdded += 1
+                  }
                 }
               })
             }
@@ -173,11 +424,18 @@ export function useProductFeedSync(): UseProductFeedSyncReturn {
         if (recentProducts && Array.isArray(recentProducts) && recentProducts.length > 0) {
           console.log('📦 Processing recent products:', recentProducts.length)
           const validRecent = recentProducts.filter(isValidProduct)
+          recentValidCount = validRecent.length
           console.log('✅ Valid recent products after filter:', validRecent.length)
           validRecent.forEach(product => {
-            aggregatedProducts.push({
-              product
-            })
+            if (!seenProductIds.has(product.id)) {
+              seenProductIds.add(product.id)
+              aggregatedProducts.push({
+                product,
+                source: 'shopify',
+                attributes: { origin: { hook: 'useRecentProducts' } }
+              })
+              newUniqueProductsAdded += 1
+            }
           })
         } else {
           console.log('⚠️ No recent products or empty array')
@@ -187,11 +445,18 @@ export function useProductFeedSync(): UseProductFeedSyncReturn {
         if (recommendedProducts && Array.isArray(recommendedProducts) && recommendedProducts.length > 0) {
           console.log('📦 Processing recommended products:', recommendedProducts.length)
           const validRecommended = recommendedProducts.filter(isValidProduct)
+          recommendedValidCount = validRecommended.length
           console.log('✅ Valid recommended products after filter:', validRecommended.length)
           validRecommended.forEach(product => {
-            aggregatedProducts.push({
-              product
-            })
+            if (!seenProductIds.has(product.id)) {
+              seenProductIds.add(product.id)
+              aggregatedProducts.push({
+                product,
+                source: 'shopify',
+                attributes: { origin: { hook: 'useRecommendedProducts' } }
+              })
+              newUniqueProductsAdded += 1
+            }
           })
         } else {
           console.log('⚠️ No recommended products or empty array')
@@ -204,11 +469,12 @@ export function useProductFeedSync(): UseProductFeedSyncReturn {
         }
 
         console.log('📊 Collected products:', {
-          saved: savedProducts?.filter(isValidProduct).length || 0,
-          lists: productLists?.reduce((sum, list) => sum + (list.products?.filter(isValidProduct).length || 0), 0) || 0,
-          orders: orders?.reduce((sum, order) => sum + (order.lineItems?.filter(item => item.product && isValidProduct(item.product)).length || 0), 0) || 0,
-          recent: recentProducts?.filter(isValidProduct).length || 0,
-          recommended: recommendedProducts?.filter(isValidProduct).length || 0,
+          saved: savedValidCount,
+          lists: listsValidCount,
+          orders: ordersValidCount,
+          recent: recentValidCount,
+          recommended: recommendedValidCount,
+          uniqueSynced: newUniqueProductsAdded,
           total: aggregatedProducts.length
         })
 
@@ -279,7 +545,13 @@ export function useProductFeedSync(): UseProductFeedSyncReturn {
                        (followedShops && Array.isArray(followedShops) && followedShops.length > 0)
     
     // Only sync if we have data, or if hooks have finished loading and returned null (confirmed no data)
-    const allHooksFinished = !listsLoading && !savedLoading && !ordersLoading && !recentLoading && !shopsLoading && !recommendedLoading
+    const allHooksFinished =
+      productListsPagination.isComplete &&
+      savedProductsPagination.isComplete &&
+      ordersPagination.isComplete &&
+      recentProductsPagination.isComplete &&
+      recommendedProductsPagination.isComplete &&
+      followedShopsPagination.isComplete
     
     if (hasAnyData || (allHooksFinished && !hasSyncedRef.current)) {
       syncFeed()
@@ -305,7 +577,19 @@ export function useProductFeedSync(): UseProductFeedSyncReturn {
     recentError,
     shopsError,
     recommendedError,
-    getValidToken
+    getValidToken,
+    productListsPagination.isComplete,
+    productListsPagination.isPaginating,
+    savedProductsPagination.isComplete,
+    savedProductsPagination.isPaginating,
+    ordersPagination.isComplete,
+    ordersPagination.isPaginating,
+    recentProductsPagination.isComplete,
+    recentProductsPagination.isPaginating,
+    recommendedProductsPagination.isComplete,
+    recommendedProductsPagination.isPaginating,
+    followedShopsPagination.isComplete,
+    followedShopsPagination.isPaginating
   ])
 
   return {

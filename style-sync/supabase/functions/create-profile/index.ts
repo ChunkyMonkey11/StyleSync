@@ -17,6 +17,7 @@ interface UserProfile {
   bio?: string
   interests?: string[]
   style_preferences?: string[]
+  gender?: 'MALE' | 'FEMALE' | 'NEUTRAL'
   created_at: string
   updated_at?: string
 }
@@ -97,88 +98,121 @@ Deno.serve(async (req) => {
       return errorResponse('Missing profile data', 400)
     }
 
-    // Validate required fields
-    // These fields MUST be present or the database insert will fail
-    if (!profileData.username) {
-      return errorResponse('Username is required', 400)
+    // Normalize username if provided
+    if (profileData.username) {
+      profileData.username = String(profileData.username).toLowerCase()
+    }
+    // Validate gender if present
+    if (profileData.gender) {
+      const g = String(profileData.gender).toUpperCase()
+      if (!['MALE','FEMALE','NEUTRAL'].includes(g)) {
+        return errorResponse('Invalid gender value', 400)
+      }
+      profileData.gender = g
     }
     
     if (!profileData.display_name) {
       return errorResponse('Display name is required', 400)
     }
     
-    // Override shop_public_id with the verified user's publicId from JWT
-    // This ensures users can only create profiles for themselves, not others!
-    // Security: Even if someone tries to send a different shop_public_id, we ignore it
-    profileData.shop_public_id = payload.publicId
-    
-    console.log('Creating profile for:', profileData.username)
-    
-
     // ============================================
     // STEP 5: INITIALIZE SUPABASE CLIENT
     // ============================================
-    // To interact with the database, we need a Supabase client
-    // This is server-side, so we use the SERVICE_ROLE_KEY (has full database access)
-    
     const supabaseUrl = Deno.env.get('SUPABASE_URL')
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
     
-    // These should be automatically available in Supabase Edge Functions
-    // If missing, something is wrong with the deployment
     if (!supabaseUrl || !supabaseKey) {
       return errorResponse('Server configuration error', 500)
     }
 
-    // Create the Supabase client
-    // This gives us access to .from('table_name') for database operations
     const supabase = createClient(supabaseUrl, supabaseKey)
     
+    // ============================================
+    // STEP 6: INSERT OR UPDATE PROFILE
+    // ============================================
+    const { data: existingProfile, error: existingError } = await supabase
+      .from('userprofiles')
+      .select('id, username')
+      .eq('shop_public_id', payload.publicId)
+      .maybeSingle()
 
-    // ============================================
-    // STEP 6: INSERT PROFILE INTO DATABASE
-    // ============================================
-    // Now we insert the validated profile data into the 'userprofiles' table
+    if (existingError) {
+      console.error('Error checking existing profile:', existingError)
+      return errorResponse('Failed to check existing profile', 500)
+    }
+
+    const isCreating = !existingProfile
+
+    if (isCreating && !profileData.username) {
+      return errorResponse('Username is required', 400)
+    }
     
-    // supabase.from('userprofiles') - Select the table
-    // .insert([profileData]) - Insert one profile (array allows bulk inserts)
-    // .select() - Return the inserted data (including auto-generated fields)
+    // Override shop_public_id with the verified user's publicId from JWT
+    profileData.shop_public_id = payload.publicId
+    
+    if (existingProfile) {
+      console.log('Updating profile for:', existingProfile.username)
+
+      if (profileData.username && profileData.username !== existingProfile.username) {
+        return errorResponse('Username cannot be changed once set', 409)
+      }
+
+      const updatePayload = {
+        display_name: profileData.display_name,
+        profile_pic: profileData.profile_pic ?? null,
+        bio: profileData.bio ?? null,
+        interests: profileData.interests ?? [],
+        style_preferences: profileData.style_preferences ?? [],
+        gender: profileData.gender ?? null,
+        updated_at: profileData.updated_at ?? new Date().toISOString()
+      }
+
+      const { data: updatedData, error: updateError } = await supabase
+        .from('userprofiles')
+        .update(updatePayload)
+        .eq('id', existingProfile.id)
+        .select()
+        .single()
+
+      if (updateError) {
+        console.error('Database error updating profile:', updateError)
+        return errorResponse(`Failed to update profile: ${updateError.message}`, 500)
+      }
+
+      console.log('Profile updated successfully:', updatedData.id)
+      return successResponse({ 
+        profile: updatedData,
+        message: 'Profile updated successfully'
+      })
+    }
+
+    console.log('Creating profile for:', profileData.username)
+
     const { data, error } = await supabase
       .from('userprofiles')
       .insert([profileData])
       .select()
     
-    // Check if the database operation failed
     if (error) {
       console.error('Database error:', error)
       
-      // Provide helpful error messages for common issues
       if (error.code === '23505') {
-        // Unique constraint violation (duplicate username or shop_public_id)
         return errorResponse('Username already exists', 409)
       }
       
-      // Generic database error
       return errorResponse(`Failed to create profile: ${error.message}`, 500)
     }
     
-    // Ensure we got data back
     if (!data || data.length === 0) {
       return errorResponse('Profile created but no data returned', 500)
     }
     
     console.log('Profile created successfully:', data[0].id)
-
-
-    // ============================================
-    // STEP 7: RETURN SUCCESS RESPONSE
-    // ============================================
-    // Send the created profile back to the Mini app
-    // data[0] is the first (and only) inserted profile
     return successResponse({ 
       profile: data[0],
       message: 'Profile created successfully'
     })
+
 
   } catch (error) {
     // Catch any unexpected errors

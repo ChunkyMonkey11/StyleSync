@@ -9,6 +9,10 @@ import { corsHeaders, handleCors } from '../_shared/cors.ts'
 import { verifyJWT, extractBearerToken } from '../_shared/jwt-utils.ts'
 import { errorResponse, successResponse, requireMethod } from '../_shared/responses.ts'
 
+// Feed pruning configuration
+const FEED_CAP = 200         // keep at most this many rows per user
+const PRUNE_CHUNK = 30       // delete up to this many oldest rows per run
+
 interface Product {
   id: string
   title: string
@@ -45,6 +49,9 @@ interface FollowedShop {
 interface SyncProductFeedRequest {
   products: Array<{
     product: Product
+    source?: string
+    intent_name?: string
+    attributes?: Record<string, unknown>
   }>
   followedShops: FollowedShop[]
 }
@@ -155,14 +162,21 @@ Deno.serve(async (req) => {
     if (body.products && body.products.length > 0) {
       // Deduplicate products by product_id (keep first occurrence)
       const seenProductIds = new Set<string>()
-      const uniqueProducts = body.products.filter(item => {
-        const productId = item.product.id
-        if (seenProductIds.has(productId)) {
-          return false // Skip duplicate
+      const uniqueProducts: typeof body.products = []
+
+      for (const item of body.products) {
+        const productId = item?.product?.id
+        if (!productId) {
+          continue
         }
+
+        if (seenProductIds.has(productId)) {
+          continue
+        }
+
         seenProductIds.add(productId)
-        return true // Keep first occurrence
-      })
+        uniqueProducts.push(item)
+      }
 
       console.log(`📦 Deduplicated products: ${body.products.length} → ${uniqueProducts.length}`)
 
@@ -189,6 +203,10 @@ Deno.serve(async (req) => {
           product_url: productUrl,
           product_price: product.price.amount,
           product_currency: product.price.currencyCode,
+          source: item.source || 'shopify',
+          intent_name: item.intent_name || null,
+          attributes: item.attributes ? item.attributes as any : null,
+          synced_at: new Date().toISOString()
         }
       })
 
@@ -226,6 +244,107 @@ Deno.serve(async (req) => {
       }
 
       console.log(`Synced ${productInserts.length} products`)
+
+      // ============================================
+      // STEP 6.1: PRUNE OLDEST ROWS IF ABOVE CAP
+      // ============================================
+      try {
+        // Fetch ids beyond the cap ordered from newest to oldest, then drop the tail
+        const { data: overRows } = await supabase
+          .from('user_product_feed')
+          .select('id')
+          .eq('shop_public_id', payload.publicId)
+          .order('created_at', { ascending: false })
+          .range(FEED_CAP, FEED_CAP + PRUNE_CHUNK - 1)
+
+        if (overRows && overRows.length > 0) {
+          const idsToDelete = overRows.map(r => r.id)
+          await supabase
+            .from('user_product_feed')
+            .delete()
+            .in('id', idsToDelete)
+          console.log(`Pruned ${idsToDelete.length} old products beyond cap ${FEED_CAP}`)
+        }
+      } catch (pruneErr) {
+        console.error('Prune step failed (non-fatal):', pruneErr)
+      }
+
+      // ============================================
+      // STEP 6.2: UPDATE USER PERSONALIZATION STATE
+      // ============================================
+      try {
+        // Get current state
+        const { data: stateRows, error: stateErr } = await supabase
+          .from('user_personalization_state')
+          .select('id, signals')
+          .eq('shop_public_id', payload.publicId)
+          .limit(1)
+
+        if (stateErr) {
+          console.error('Error reading personalization state:', stateErr)
+        } else {
+          const existing = stateRows && stateRows.length > 0 ? stateRows[0] : null
+          const signals = (existing?.signals as any) || {}
+          signals.brand_counts = signals.brand_counts || {}
+          signals.category_counts = signals.category_counts || {}
+          signals.price = signals.price || { sum: 0, count: 0, min: null, max: null }
+          signals.category_price = signals.category_price || {}
+
+          // Apply updates from batch
+          for (const item of uniqueProducts) {
+            const product = item.product as any
+            const attrs = (item as any).attributes || {}
+            const brandName =
+              product?.shop?.name ||
+              attrs?.brand ||
+              'Unknown'
+            signals.brand_counts[brandName] = (signals.brand_counts[brandName] || 0) + 1
+
+            const category =
+              attrs?.category ||
+              (attrs?.subcategories && attrs.subcategories[0]) ||
+              null
+            if (category) {
+              signals.category_counts[category] = (signals.category_counts[category] || 0) + 1
+            }
+
+            // Price aggregation (global)
+            const priceNum = parseFloat(product?.price?.amount ?? '0')
+            if (!Number.isNaN(priceNum) && priceNum > 0) {
+              signals.price.sum += priceNum
+              signals.price.count += 1
+              signals.price.min = signals.price.min === null ? priceNum : Math.min(signals.price.min, priceNum)
+              signals.price.max = signals.price.max === null ? priceNum : Math.max(signals.price.max, priceNum)
+              if (category) {
+                signals.category_price[category] = signals.category_price[category] || { sum: 0, count: 0, min: null, max: null }
+                const cp = signals.category_price[category]
+                cp.sum += priceNum
+                cp.count += 1
+                cp.min = cp.min === null ? priceNum : Math.min(cp.min, priceNum)
+                cp.max = cp.max === null ? priceNum : Math.max(cp.max, priceNum)
+              }
+            }
+          }
+
+          // Upsert state
+          if (existing) {
+            await supabase
+              .from('user_personalization_state')
+              .update({ signals, updated_at: new Date().toISOString() })
+              .eq('id', existing.id)
+          } else {
+            await supabase
+              .from('user_personalization_state')
+              .insert({
+                shop_public_id: payload.publicId,
+                signals,
+                updated_at: new Date().toISOString()
+              })
+          }
+        }
+      } catch (stateUpdateErr) {
+        console.error('State update failed (non-fatal):', stateUpdateErr)
+      }
     }
 
     // ============================================
@@ -273,6 +392,21 @@ Deno.serve(async (req) => {
       }
 
       console.log(`Synced ${shopInserts.length} followed shops`)
+
+      // Try to reflect shops in shops_catalog for popularity tracking
+      try {
+        const catalogRows = body.followedShops.map(shop => ({
+          shop_id: shop.id,
+          shop_name: shop.name,
+          primary_domain: shop.primaryDomain?.url || null,
+          updated_at: new Date().toISOString()
+        }))
+        await supabase
+          .from('shops_catalog')
+          .upsert(catalogRows, { onConflict: 'shop_id' })
+      } catch (catalogErr) {
+        console.error('Shops catalog upsert failed (non-fatal):', catalogErr)
+      }
     }
 
     // ============================================

@@ -17,6 +17,9 @@ interface FeedProduct {
   product_price: string
   product_currency: string
   created_at: string
+  source?: string | null
+  intent_name?: string | null
+  attributes?: Record<string, unknown> | null
 }
 
 interface FeedShop {
@@ -153,7 +156,7 @@ Deno.serve(async (req) => {
     // Select only the columns that exist (explicitly list them to avoid schema cache issues)
     const { data: products, error: productsError } = await supabase
       .from('user_product_feed')
-      .select('id, product_id, product_title, product_image, product_url, product_price, product_currency, created_at')
+      .select('id, product_id, product_title, product_image, product_url, product_price, product_currency, created_at, source, intent_name, attributes')
       .eq('shop_public_id', friendShopPublicId)
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1)
@@ -188,7 +191,10 @@ Deno.serve(async (req) => {
       product_url: p.product_url,
       product_price: p.product_price,
       product_currency: p.product_currency,
-      created_at: p.created_at
+      created_at: p.created_at,
+      source: (p as any).source ?? null,
+      intent_name: (p as any).intent_name ?? null,
+      attributes: (p as any).attributes ?? null
     }))
     
     const formattedShops: FeedShop[] = (followedShops || []).map(s => ({

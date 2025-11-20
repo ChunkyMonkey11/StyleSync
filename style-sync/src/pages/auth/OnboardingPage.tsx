@@ -13,6 +13,7 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps) {
     const [bio, setBio] = useState('')
     const [stylePreferences, setStylePreferences] = useState<string[]>([])
     const [interests, setInterests] = useState<string[]>([])
+    const [gender, setGender] = useState<'MALE' | 'FEMALE' | 'NEUTRAL' | ''>('')
     const [customInterest, setCustomInterest] = useState('')
     const [activeBubbleIndex, setActiveBubbleIndex] = useState<number | null>(null)
     const [errors, setErrors] = useState<Record<string, string>>({})
@@ -108,6 +109,7 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps) {
                 bio: bio.trim() || undefined,
                 style_preferences: stylePreferences,
                 interests: interests,
+                gender: gender || undefined,
                 created_at: new Date().toISOString()
             }
             
@@ -306,6 +308,27 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps) {
                                     )
                                 })}
                             </div>
+                        </div>
+                    </div>
+
+                    {/* Gender */}
+                    <div className="mb-6">
+                        <label className="block text-sm font-medium mb-3">Gender (optional)</label>
+                        <div className="grid grid-cols-3 gap-2">
+                            {(['MALE','FEMALE','NEUTRAL'] as const).map(g => (
+                                <button
+                                    key={g}
+                                    type="button"
+                                    onClick={() => setGender(g)}
+                                    className={`p-2 text-sm rounded-lg border transition-colors ${
+                                        gender === g
+                                            ? 'bg-purple-600 text-white border-purple-600'
+                                            : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                                    }`}
+                                >
+                                    {g === 'MALE' ? 'Male' : g === 'FEMALE' ? 'Female' : 'Non-binary'}
+                                </button>
+                            ))}
                         </div>
                     </div>
                     

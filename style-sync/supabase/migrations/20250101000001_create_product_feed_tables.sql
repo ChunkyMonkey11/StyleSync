@@ -23,15 +23,22 @@ CREATE TABLE IF NOT EXISTS user_product_feed (
 -- Add indexes for efficient querying
 CREATE INDEX IF NOT EXISTS idx_user_product_feed_shop_public_id ON user_product_feed(shop_public_id);
 CREATE INDEX IF NOT EXISTS idx_user_product_feed_product_id ON user_product_feed(product_id);
-CREATE INDEX IF NOT EXISTS idx_user_product_feed_source_type ON user_product_feed(source_type);
 CREATE INDEX IF NOT EXISTS idx_user_product_feed_created_at ON user_product_feed(created_at DESC);
 
 -- Add foreign key constraint to userprofiles table
-ALTER TABLE user_product_feed 
-ADD CONSTRAINT fk_user_product_feed_userprofiles 
-FOREIGN KEY (shop_public_id) 
-REFERENCES userprofiles(shop_public_id) 
-ON DELETE CASCADE;
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint 
+        WHERE conname = 'fk_user_product_feed_userprofiles'
+    ) THEN
+        ALTER TABLE user_product_feed 
+        ADD CONSTRAINT fk_user_product_feed_userprofiles 
+        FOREIGN KEY (shop_public_id) 
+        REFERENCES userprofiles(shop_public_id) 
+        ON DELETE CASCADE;
+    END IF;
+END $$;
 
 -- Create user_followed_shops table
 -- Stores followed shops per user
@@ -55,19 +62,29 @@ CREATE INDEX IF NOT EXISTS idx_user_followed_shops_shop_public_id ON user_follow
 CREATE INDEX IF NOT EXISTS idx_user_followed_shops_followed_shop_id ON user_followed_shops(followed_shop_id);
 
 -- Add foreign key constraint to userprofiles table
-ALTER TABLE user_followed_shops 
-ADD CONSTRAINT fk_user_followed_shops_userprofiles 
-FOREIGN KEY (shop_public_id) 
-REFERENCES userprofiles(shop_public_id) 
-ON DELETE CASCADE;
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint 
+        WHERE conname = 'fk_user_followed_shops_userprofiles'
+    ) THEN
+        ALTER TABLE user_followed_shops 
+        ADD CONSTRAINT fk_user_followed_shops_userprofiles 
+        FOREIGN KEY (shop_public_id) 
+        REFERENCES userprofiles(shop_public_id) 
+        ON DELETE CASCADE;
+    END IF;
+END $$;
 
 -- Create trigger to automatically update updated_at timestamp for user_product_feed
+DROP TRIGGER IF EXISTS update_user_product_feed_updated_at ON user_product_feed;
 CREATE TRIGGER update_user_product_feed_updated_at 
     BEFORE UPDATE ON user_product_feed 
     FOR EACH ROW 
     EXECUTE FUNCTION update_updated_at_column();
 
 -- Create trigger to automatically update updated_at timestamp for user_followed_shops
+DROP TRIGGER IF EXISTS update_user_followed_shops_updated_at ON user_followed_shops;
 CREATE TRIGGER update_user_followed_shops_updated_at 
     BEFORE UPDATE ON user_followed_shops 
     FOR EACH ROW 
@@ -79,6 +96,7 @@ ALTER TABLE user_followed_shops ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policies for user_product_feed
 -- Users can view their own feed or feeds from their friends
+DROP POLICY IF EXISTS "Users can view their own or friends' product feeds" ON user_product_feed;
 CREATE POLICY "Users can view their own or friends' product feeds" ON user_product_feed
     FOR SELECT USING (
         shop_public_id = (
@@ -102,6 +120,7 @@ CREATE POLICY "Users can view their own or friends' product feeds" ON user_produ
     );
 
 -- Users can only insert/update/delete their own product feed
+DROP POLICY IF EXISTS "Users can manage their own product feed" ON user_product_feed;
 CREATE POLICY "Users can manage their own product feed" ON user_product_feed
     FOR ALL USING (
         shop_public_id = (
@@ -113,6 +132,7 @@ CREATE POLICY "Users can manage their own product feed" ON user_product_feed
 
 -- RLS Policies for user_followed_shops
 -- Users can view their own followed shops or followed shops from their friends
+DROP POLICY IF EXISTS "Users can view their own or friends' followed shops" ON user_followed_shops;
 CREATE POLICY "Users can view their own or friends' followed shops" ON user_followed_shops
     FOR SELECT USING (
         shop_public_id = (
@@ -136,6 +156,7 @@ CREATE POLICY "Users can view their own or friends' followed shops" ON user_foll
     );
 
 -- Users can only insert/update/delete their own followed shops
+DROP POLICY IF EXISTS "Users can manage their own followed shops" ON user_followed_shops;
 CREATE POLICY "Users can manage their own followed shops" ON user_followed_shops
     FOR ALL USING (
         shop_public_id = (

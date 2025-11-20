@@ -10,6 +10,9 @@ interface FeedProduct {
   product_price: string
   product_currency: string
   created_at: string
+  source?: string | null
+  intent_name?: string | null
+  attributes?: any
 }
 
 interface FeedShop {
@@ -74,10 +77,20 @@ export function useFriendFeed(friendShopPublicId: string | null): UseFriendFeedR
 
       const data = await response.json()
 
+      const incoming: FeedProduct[] = data.products || []
       if (append) {
-        setProducts(prev => [...prev, ...(data.products || [])])
+        setProducts(prev => {
+          const seen = new Set(prev.map(p => p.id))
+          const uniqueIncoming = incoming.filter(p => !seen.has(p.id))
+          return [...prev, ...uniqueIncoming]
+        })
       } else {
-        setProducts(data.products || [])
+        // Replace but ensure uniqueness just in case the API overlaps pages
+        const uniqMap = new Map<string, FeedProduct>()
+        for (const p of incoming) {
+          if (!uniqMap.has(p.id)) uniqMap.set(p.id, p)
+        }
+        setProducts(Array.from(uniqMap.values()))
         setFollowedShops(data.followed_shops || [])
       }
 

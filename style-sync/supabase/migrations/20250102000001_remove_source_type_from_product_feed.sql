@@ -12,6 +12,15 @@ DROP COLUMN IF EXISTS order_id;
 
 -- Add unique constraint to prevent duplicate products per user
 -- This ensures each product_id appears only once per shop_public_id
-ALTER TABLE user_product_feed
-ADD CONSTRAINT unique_user_product UNIQUE (shop_public_id, product_id);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_constraint
+    WHERE conname = 'unique_user_product'
+  ) THEN
+    ALTER TABLE user_product_feed
+    ADD CONSTRAINT unique_user_product UNIQUE (shop_public_id, product_id);
+  END IF;
+END $$;
 
