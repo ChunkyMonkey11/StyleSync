@@ -60,6 +60,7 @@ CREATE INDEX IF NOT EXISTS idx_user_product_feed_shop_source_created_at
   ON public.user_product_feed(shop_public_id, source, created_at DESC);
 
 -- User-level personalization state (long-lived JSONB)
+-- Note: This table will be removed in a later migration (20250104000001_remove_personalization_engine.sql)
 CREATE TABLE IF NOT EXISTS public.user_personalization_state (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   shop_public_id TEXT NOT NULL,
@@ -68,11 +69,19 @@ CREATE TABLE IF NOT EXISTS public.user_personalization_state (
   UNIQUE (shop_public_id)
 );
 
-ALTER TABLE public.user_personalization_state
-  ADD CONSTRAINT fk_user_personalization_state_userprofiles
-  FOREIGN KEY (shop_public_id)
-  REFERENCES public.userprofiles(shop_public_id)
-  ON DELETE CASCADE;
+-- Add foreign key constraint (idempotent)
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'fk_user_personalization_state_userprofiles'
+  ) THEN
+    ALTER TABLE public.user_personalization_state
+    ADD CONSTRAINT fk_user_personalization_state_userprofiles
+    FOREIGN KEY (shop_public_id)
+    REFERENCES public.userprofiles(shop_public_id)
+    ON DELETE CASCADE;
+  END IF;
+END $$;
 
 CREATE INDEX IF NOT EXISTS idx_user_personalization_state_shop_public_id
   ON public.user_personalization_state(shop_public_id);

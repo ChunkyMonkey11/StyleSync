@@ -4,7 +4,6 @@ import { useFriendRequests } from '../../hooks/useFriendRequests'
 import { useFriendFeed } from '../../hooks/useFriendFeed'
 import { useProductFeedSync } from '../../hooks/useProductFeedSync'
 import { useAuth } from '../../hooks/useAuth'
-import { PersonalizedRecommendations } from '../../components/PersonalizedRecommendations'
 
 interface UserProfile {
   shop_public_id: string
@@ -252,9 +251,6 @@ export function FeedPage({ onBack }: FeedPageProps) {
           </div>
         )}
 
-        {/* Personalized Recommendations */}
-        <PersonalizedRecommendations onProductClick={(productId) => console.log('Product clicked:', productId)} />
-
         {/* Products Grid - Scrollable */}
         {products.length > 0 ? (
           <div className="space-y-4">
@@ -275,19 +271,13 @@ export function FeedPage({ onBack }: FeedPageProps) {
                       onFavoriteToggled={handleFavoriteToggled}
                       variant="compact"
                     />
-                    {/* Origin / Suggested badge */}
+                    {/* Origin badge */}
                     <div className="mt-1">
-                      {product.source === 'personalized' ? (
-                        <span className="text-[10px] text-white/70">
-                          Suggested{product.intent_name ? ` · ${product.intent_name.replace(/_/g, ' ')}` : ''}
-                        </span>
-                      ) : (
-                        <span className="text-[10px] text-white/60">
-                          {(product.attributes as any)?.origin?.hook
-                            ? String((product.attributes as any).origin.hook).replace(/^use/, '')
-                            : 'Shopify'}
-                        </span>
-                      )}
+                      <span className="text-[10px] text-white/60">
+                        {(product.attributes as any)?.origin?.hook
+                          ? String((product.attributes as any).origin.hook).replace(/^use/, '')
+                          : 'Shopify'}
+                      </span>
                     </div>
                   </div>
                 )

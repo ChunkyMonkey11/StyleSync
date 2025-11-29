@@ -65,7 +65,7 @@ Deno.serve(async (req) => {
     // Fetch user's own feed
     const { data: products, error: productsError } = await supabase
       .from('user_product_feed')
-      .select('id, product_id, product_title, product_image, product_url, product_price, product_currency, created_at, source, intent_name, attributes')
+      .select('id, product_id, product_title, product_image, product_url, product_price, product_currency, created_at, source, attributes')
       .eq('shop_public_id', payload.publicId)
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1)

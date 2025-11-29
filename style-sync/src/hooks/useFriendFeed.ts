@@ -11,7 +11,6 @@ interface FeedProduct {
   product_currency: string
   created_at: string
   source?: string | null
-  intent_name?: string | null
   attributes?: any
 }
 

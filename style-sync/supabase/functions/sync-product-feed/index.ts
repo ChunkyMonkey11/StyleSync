@@ -50,7 +50,6 @@ interface SyncProductFeedRequest {
   products: Array<{
     product: Product
     source?: string
-    intent_name?: string
     attributes?: Record<string, unknown>
   }>
   followedShops: FollowedShop[]
@@ -204,7 +203,6 @@ Deno.serve(async (req) => {
           product_price: product.price.amount,
           product_currency: product.price.currencyCode,
           source: item.source || 'shopify',
-          intent_name: item.intent_name || null,
           attributes: item.attributes ? item.attributes as any : null,
           synced_at: new Date().toISOString()
         }
@@ -267,83 +265,6 @@ Deno.serve(async (req) => {
         }
       } catch (pruneErr) {
         console.error('Prune step failed (non-fatal):', pruneErr)
-      }
-
-      // ============================================
-      // STEP 6.2: UPDATE USER PERSONALIZATION STATE
-      // ============================================
-      try {
-        // Get current state
-        const { data: stateRows, error: stateErr } = await supabase
-          .from('user_personalization_state')
-          .select('id, signals')
-          .eq('shop_public_id', payload.publicId)
-          .limit(1)
-
-        if (stateErr) {
-          console.error('Error reading personalization state:', stateErr)
-        } else {
-          const existing = stateRows && stateRows.length > 0 ? stateRows[0] : null
-          const signals = (existing?.signals as any) || {}
-          signals.brand_counts = signals.brand_counts || {}
-          signals.category_counts = signals.category_counts || {}
-          signals.price = signals.price || { sum: 0, count: 0, min: null, max: null }
-          signals.category_price = signals.category_price || {}
-
-          // Apply updates from batch
-          for (const item of uniqueProducts) {
-            const product = item.product as any
-            const attrs = (item as any).attributes || {}
-            const brandName =
-              product?.shop?.name ||
-              attrs?.brand ||
-              'Unknown'
-            signals.brand_counts[brandName] = (signals.brand_counts[brandName] || 0) + 1
-
-            const category =
-              attrs?.category ||
-              (attrs?.subcategories && attrs.subcategories[0]) ||
-              null
-            if (category) {
-              signals.category_counts[category] = (signals.category_counts[category] || 0) + 1
-            }
-
-            // Price aggregation (global)
-            const priceNum = parseFloat(product?.price?.amount ?? '0')
-            if (!Number.isNaN(priceNum) && priceNum > 0) {
-              signals.price.sum += priceNum
-              signals.price.count += 1
-              signals.price.min = signals.price.min === null ? priceNum : Math.min(signals.price.min, priceNum)
-              signals.price.max = signals.price.max === null ? priceNum : Math.max(signals.price.max, priceNum)
-              if (category) {
-                signals.category_price[category] = signals.category_price[category] || { sum: 0, count: 0, min: null, max: null }
-                const cp = signals.category_price[category]
-                cp.sum += priceNum
-                cp.count += 1
-                cp.min = cp.min === null ? priceNum : Math.min(cp.min, priceNum)
-                cp.max = cp.max === null ? priceNum : Math.max(cp.max, priceNum)
-              }
-            }
-          }
-
-          // Upsert state
-          if (existing) {
-            await supabase
-              .from('user_personalization_state')
-              .update({ signals, updated_at: new Date().toISOString() })
-              .eq('id', existing.id)
-          } else {
-            await supabase
-              .from('user_personalization_state')
-              .insert({
-                shop_public_id: payload.publicId,
-                signals,
-                updated_at: new Date().toISOString()
-              })
-          }
-        }
-      } catch (stateUpdateErr) {
-        console.error('State update failed (non-fatal):', stateUpdateErr)
       }
     }
 
