@@ -313,21 +313,6 @@ Deno.serve(async (req) => {
       }
 
       console.log(`Synced ${shopInserts.length} followed shops`)
-
-      // Try to reflect shops in shops_catalog for popularity tracking
-      try {
-        const catalogRows = body.followedShops.map(shop => ({
-          shop_id: shop.id,
-          shop_name: shop.name,
-          primary_domain: shop.primaryDomain?.url || null,
-          updated_at: new Date().toISOString()
-        }))
-        await supabase
-          .from('shops_catalog')
-          .upsert(catalogRows, { onConflict: 'shop_id' })
-      } catch (catalogErr) {
-        console.error('Shops catalog upsert failed (non-fatal):', catalogErr)
-      }
     }
 
     // ============================================

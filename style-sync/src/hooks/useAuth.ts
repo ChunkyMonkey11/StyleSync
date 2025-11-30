@@ -12,6 +12,9 @@ interface AuthData {
   token: string      // JWT token for API calls
   expiresAt: number  // Timestamp when token expires
   shopMiniToken: string // Shop Mini token for consistency
+  publicId?: string  // User's public ID from Minis Admin API
+  hasProfile?: boolean // Whether user has a profile
+  profile?: any      // User profile data if exists
 }
 
 /**
@@ -31,6 +34,7 @@ export function useAuth() {
   // State
   const [jwtToken, setJwtToken] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
+  const [authData, setAuthData] = useState<AuthData | null>(null)
   
   // Cache for in-flight token fetch promise to prevent duplicate concurrent requests
   const tokenFetchPromiseRef = useRef<Promise<string> | null>(null)
@@ -52,6 +56,7 @@ export function useAuth() {
             // If expires in more than 1 day, we can still use it
             if (data.expiresAt > Date.now() + 86400000) {  // 86400000ms = 1 day
               setJwtToken(data.token)
+              setAuthData(data)
               console.log('✅ Loaded existing JWT token from secure storage')
             } else {
               // Token expired or expiring soon, clear it
@@ -101,6 +106,7 @@ export function useAuth() {
           console.log('✅ Using existing JWT token from storage')
           // Update this instance's in-memory state for consistency
           setJwtToken(data.token)
+          setAuthData(data)
           return data.token
         }
       } catch (parseError) {
@@ -117,6 +123,7 @@ export function useAuth() {
           // If expires in more than 1 day, use existing token
           if (data.expiresAt > Date.now() + 86400000) {
             console.log('✅ Using existing JWT token')
+            setAuthData(data)
             return jwtToken
           }
         } catch (parseError) {
@@ -191,7 +198,8 @@ export function useAuth() {
         throw new Error(`Authentication failed: ${response.status} ${errorText}`)
       }
 
-      const { token, expiresIn } = await response.json()
+      const authResponse = await response.json()
+      const { token, expiresIn, publicId, hasProfile, profile } = authResponse
       
       if (!token) {
         console.error('❌ No token in response')
@@ -199,16 +207,26 @@ export function useAuth() {
       }
 
       console.log('✅ Got JWT token, expires in', expiresIn, 'seconds')
+      if (publicId) {
+        console.log('👤 PublicId:', publicId)
+      }
+      if (hasProfile !== undefined) {
+        console.log('📋 Has profile:', hasProfile)
+      }
 
-      // Step 3: Store JWT token securely
+      // Step 3: Store JWT token securely with profile info
       const authData: AuthData = {
         token,
         expiresAt: Date.now() + (expiresIn * 1000),  // Convert seconds to milliseconds
-        shopMiniToken  // Store for consistency
+        shopMiniToken,  // Store for consistency
+        publicId,       // Store publicId if available
+        hasProfile,     // Store hasProfile status
+        profile         // Store profile data if available
       }
       
       await setSecret({ value: JSON.stringify(authData) })
       setJwtToken(token)
+      setAuthData(authData)
       console.log('💾 Token stored securely')
       
       return token
@@ -242,6 +260,7 @@ export function useAuth() {
     console.log('Clearing authentication')
     await removeSecret()
     setJwtToken(null)
+    setAuthData(null)
     // Clear any in-flight token fetch promise
     tokenFetchPromiseRef.current = null
   }, [removeSecret])
@@ -251,7 +270,8 @@ export function useAuth() {
     getValidToken,    // Call this to get a token for API requests
     clearAuth,        // Call this to logout/clear token
     isLoading,        // True when fetching new token
-    isAuthenticated: !!jwtToken  // True if we have a token
+    isAuthenticated: !!jwtToken,  // True if we have a token
+    authData          // Full auth data including hasProfile and profile
   }
 }
 

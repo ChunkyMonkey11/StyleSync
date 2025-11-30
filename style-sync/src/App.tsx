@@ -8,7 +8,7 @@ export function App() {
   const [hasProfile, setHasProfile] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const { getValidToken } = useAuth()
+  const { getValidToken, authData } = useAuth()
   const hasCheckedProfile = useRef(false)
 
   useEffect(() => {
@@ -18,16 +18,42 @@ export function App() {
     }
   }, [])
 
+  // Also check authData when it changes (in case it's loaded from storage)
+  useEffect(() => {
+    if (authData && authData.hasProfile !== undefined && hasCheckedProfile.current) {
+      console.log('📋 App: Got hasProfile from auth data:', authData.hasProfile)
+      setHasProfile(authData.hasProfile)
+      if (isLoading) {
+        setIsLoading(false)
+      }
+    }
+  }, [authData, isLoading])
+
   const checkUserProfile = async () => {
     console.log('🔍 App: Checking user profile...')
     try {
-      // Get JWT token for authentication
+      // Get JWT token for authentication (this will also trigger auth and get hasProfile)
       console.log('🔐 App: Getting JWT token...')
-      const token = await getValidToken()
+      await getValidToken()
       console.log('✅ App: Got JWT token')
       
-      // Call check-profile Edge Function
-      console.log('📡 App: Calling check-profile Edge Function...')
+      // Wait a moment for authData to be set (it's set asynchronously)
+      // Check if we have hasProfile from auth response after token is fetched
+      await new Promise(resolve => setTimeout(resolve, 100))
+      
+      // Check if we have hasProfile from auth response
+      // If authData is available, use it; otherwise fallback to check-profile
+      const currentAuthData = authData
+      if (currentAuthData && currentAuthData.hasProfile !== undefined) {
+        console.log('✅ App: Using hasProfile from auth response:', currentAuthData.hasProfile)
+        setHasProfile(currentAuthData.hasProfile)
+        setIsLoading(false)
+        return
+      }
+      
+      // Fallback: Call check-profile Edge Function if authData not available yet
+      console.log('📡 App: Calling check-profile Edge Function (fallback)...')
+      const token = await getValidToken()
       const response = await fetch(
         'https://fhyisvyhahqxryanjnby.supabase.co/functions/v1/check-profile',
         {
@@ -41,7 +67,6 @@ export function App() {
 
       console.log('📡 App: check-profile response status:', response.status)
 
-      //This line currently errors out because the response is not ok
       if (!response.ok) {
         const errorText = await response.text()
         console.error('❌ App: check-profile failed:', response.status, errorText)
