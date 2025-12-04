@@ -8,3 +8,5 @@ DROP INDEX IF EXISTS idx_shops_catalog_popularity;
 DROP INDEX IF EXISTS idx_shops_catalog_follow_count;
 
 
+
+

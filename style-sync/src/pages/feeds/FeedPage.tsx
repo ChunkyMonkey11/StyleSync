@@ -175,7 +175,7 @@ export function FeedPage({ onBack }: FeedPageProps) {
   if (selectedFriendId) {
     // Determine whose feed we're viewing
     const isMyFeed = myProfile && selectedFriendId === myProfile.shop_public_id
-    const selectedFriend = friends.find(f => f.friend_id === selectedFriendId)
+    const selectedFriend = friends.find(f => f.shop_public_id === selectedFriendId)
     const displayName = isMyFeed 
       ? myProfile.username 
       : selectedFriend 
@@ -391,7 +391,7 @@ export function FeedPage({ onBack }: FeedPageProps) {
                 {friends.map(friend => (
                   <button
                     key={friend.id}
-                    onClick={() => handleFriendClick(friend.friend_id)}
+                    onClick={() => handleFriendClick(friend.shop_public_id)}
                     className="w-full flex items-center p-4 bg-white rounded-lg border shadow-sm hover:bg-gray-50 transition-colors text-left"
                   >
                     {friend.friend_profile.profile_pic ? (

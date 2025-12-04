@@ -1,6 +1,7 @@
 /**
  * StyleSync Get Friend Feed Function
  * Retrieves product feed and followed shops for a specific friend
+ * Uses publicId from JWT (Minis Admin API integration)
  */
 
 import { createClient } from 'jsr:@supabase/supabase-js@2'
@@ -47,7 +48,7 @@ Deno.serve(async (req) => {
 
   try {
     // ============================================
-    // STEP 3: VERIFY JWT TOKEN
+    // STEP 3: VERIFY JWT TOKEN AND EXTRACT publicId
     // ============================================
     const authHeader = req.headers.get('Authorization')
     if (!authHeader) {
@@ -72,9 +73,12 @@ Deno.serve(async (req) => {
       return errorResponse('Invalid or expired token', 401);
     }
     
-    if (!payload) {
+    if (!payload || !payload.publicId) {
       return errorResponse('Invalid or expired token', 401);
     }
+
+    const currentUserPublicId = payload.publicId;
+    console.log('Getting feed for user:', currentUserPublicId);
     
     // ============================================
     // STEP 4: PARSE QUERY PARAMETERS
@@ -111,14 +115,14 @@ Deno.serve(async (req) => {
     // STEP 6: VERIFY FRIENDSHIP
     // ============================================
     // Check if viewing own feed (allow that)
-    const isOwnFeed = friendShopPublicId === payload.publicId
+    const isOwnFeed = friendShopPublicId === currentUserPublicId
     
     if (!isOwnFeed) {
-      // Get user IDs for both users
+      // Get user IDs (UUIDs) for both users by looking up shop_public_id
       const { data: currentUser, error: currentUserError } = await supabase
         .from('userprofiles')
         .select('id')
-        .eq('shop_public_id', payload.publicId)
+        .eq('shop_public_id', currentUserPublicId)
         .single()
       
       const { data: friendUser, error: friendUserError } = await supabase
@@ -131,7 +135,7 @@ Deno.serve(async (req) => {
         return errorResponse('User not found', 404)
       }
       
-      // Check if they are friends (either direction)
+      // Check if they are friends (either direction) using UUIDs
       const { data: friendship, error: friendshipError } = await supabase
         .from('friend_requests')
         .select('id')
@@ -152,7 +156,6 @@ Deno.serve(async (req) => {
     // ============================================
     // STEP 7: GET PRODUCTS
     // ============================================
-    // Select only the columns that exist (explicitly list them to avoid schema cache issues)
     const { data: products, error: productsError } = await supabase
       .from('user_product_feed')
       .select('id, product_id, product_title, product_image, product_url, product_price, product_currency, created_at, source, attributes')
@@ -220,4 +223,3 @@ Deno.serve(async (req) => {
     return errorResponse('Internal server error', 500)
   }
 })
-

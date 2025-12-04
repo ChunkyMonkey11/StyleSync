@@ -22,11 +22,13 @@ interface FriendRequest {
 
 interface Friend {
   id: string
-  friend_id: string
+  friend_id: string // UUID for remove-friend
+  shop_public_id: string // shop_public_id for get-friend-feed
   friend_profile: {
     username: string
     display_name: string
     profile_pic: string
+    shop_public_id: string
   }
   created_at: string
 }
