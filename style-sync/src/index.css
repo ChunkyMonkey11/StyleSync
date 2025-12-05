@@ -1,2 +1,38 @@
 @import "tailwindcss";
 @import "@shopify/shop-minis-react/styles";
+
+:root {
+  /* colors matching the image - deep purple to dark indigo */
+  --bg-start: #7c3aed; /* deep purple (purple-600) */
+  --bg-mid1:  #6d28d9; /* darker purple (purple-700) */
+  --bg-mid2:  #5b21b6; /* deep purple (purple-800) */
+  --bg-end:   #4c1d95; /* very dark purple-indigo (purple-900) */
+}
+
+/* Full-page background */
+body {
+  margin: 0;
+  min-height: 100vh;
+  background:
+    /* subtle glow from the top-left corner */
+    radial-gradient(120% 120% at 0% 0%,
+      #9333ea 0%,
+      var(--bg-start) 35%,
+      transparent 70%
+    ),
+    /* main diagonal gradient */
+    linear-gradient(
+      115deg,
+      var(--bg-start) 0%,
+      var(--bg-mid1) 25%,
+      var(--bg-mid2) 60%,
+      var(--bg-end) 100%
+    );
+  background-color: #1e1b4b;   /* dark indigo fallback */
+  background-attachment: fixed; /* makes it feel seamless while scrolling */
+  color: #ffffff;
+}
+
+#root {
+  min-height: 100vh;
+}

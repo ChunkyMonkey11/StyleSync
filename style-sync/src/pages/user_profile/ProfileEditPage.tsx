@@ -197,21 +197,21 @@ export function ProfileEditPage({ onBack, onSave }: ProfileEditPageProps) {
 
     if (isLoading) {
         return (
-            <div className="p-4 max-w-md mx-auto">
-                <div className="flex items-center mb-6">
+            <div className="min-h-screen  p-4 max-w-md mx-auto">
+                <div className="flex items-center mb-6 pt-4">
                     <button 
                         onClick={onBack}
-                        className="mr-3 p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                        className="mr-3 px-4 py-2.5 rounded-2xl backdrop-blur-xl bg-white/20 border border-white/30 shadow-lg hover:bg-white/30 active:scale-95 transition-all duration-200 text-white font-medium"
                     >
                         ← Back
                     </button>
-                    <h1 className="text-2xl font-bold">Edit Profile</h1>
+                    <h1 className="text-2xl font-bold text-white">Edit Profile</h1>
                 </div>
                 <div className="space-y-4">
                     {[1, 2, 3, 4].map((i) => (
-                        <div key={i} className="bg-white p-4 rounded-lg border shadow-sm animate-pulse">
-                            <div className="h-4 bg-gray-200 rounded mb-2"></div>
-                            <div className="h-3 bg-gray-200 rounded w-3/4"></div>
+                        <div key={i} className="bg-white/10 backdrop-blur-sm p-4 rounded-lg border border-white/20 shadow-lg animate-pulse">
+                            <div className="h-4 bg-white/20 rounded mb-2"></div>
+                            <div className="h-3 bg-white/20 rounded w-3/4"></div>
                         </div>
                     ))}
                 </div>
@@ -220,12 +220,12 @@ export function ProfileEditPage({ onBack, onSave }: ProfileEditPageProps) {
     }
 
     return (
-        <div className="p-4 max-w-md mx-auto">
+        <div className="min-h-screen  p-4 max-w-md mx-auto">
             {/* Header */}
-            <div className="flex items-center mb-6">
+            <div className="flex items-center mb-6 pt-4">
                 <button 
                     onClick={onBack}
-                    className="mr-3 p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                    className="mr-3 px-4 py-2.5 rounded-2xl backdrop-blur-xl bg-white/20 border border-white/30 shadow-lg hover:bg-white/30 active:scale-95 transition-all duration-200 text-white font-medium"
                 >
                     ← Back
                 </button>

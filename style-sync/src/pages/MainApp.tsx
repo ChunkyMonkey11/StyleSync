@@ -304,16 +304,16 @@ export function MainApp() {
      */
     if (isLoading) {
         return (
-            <div className="p-4 max-w-md mx-auto">
-                <div className="text-center mb-6">
-                    <h1 className="text-2xl font-bold mb-2">Style$ync</h1>
-                    <p className="text-gray-600">Loading your profile...</p>
+            <div className="min-h-screen p-4 max-w-md mx-auto">
+                <div className="text-center mb-6 pt-4">
+                    <h1 className="text-2xl font-bold mb-2 text-white">Style$ync</h1>
+                    <p className="text-white/80">Loading your profile...</p>
                 </div>
                 <div className="space-y-4">
                     {[1, 2, 3, 4].map((i) => (
-                        <div key={i} className="bg-white p-4 rounded-lg border shadow-sm animate-pulse">
-                            <div className="h-4 bg-gray-200 rounded mb-2"></div>
-                            <div className="h-3 bg-gray-200 rounded w-3/4"></div>
+                        <div key={i} className="bg-white/10 backdrop-blur-sm p-4 rounded-lg border border-white/20 shadow-lg animate-pulse">
+                            <div className="h-4 bg-white/20 rounded mb-2"></div>
+                            <div className="h-3 bg-white/20 rounded w-3/4"></div>
                         </div>
                     ))}
                 </div>
@@ -327,16 +327,16 @@ export function MainApp() {
      */
     if (error) {
         return (
-            <div className="p-4 max-w-md mx-auto">
-                <div className="text-center mb-6">
-                    <h1 className="text-2xl font-bold mb-2">Style$ync</h1>
-                    <p className="text-gray-600">Welcome back, {currentUser?.displayName || 'User'}!</p>
+            <div className="min-h-screen p-4 max-w-md mx-auto">
+                <div className="text-center mb-6 pt-4">
+                    <h1 className="text-2xl font-bold mb-2 text-white">Style$ync</h1>
+                    <p className="text-white/80">Welcome back, {currentUser?.displayName || 'User'}!</p>
                 </div>
-                <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-center">
-                    <p className="text-red-700 mb-3">{error}</p>
+                <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg p-4 text-center">
+                    <p className="text-white mb-3">{error}</p>
                     <button 
                         onClick={fetchUserProfile}
-                        className="bg-red-600 text-white py-2 px-4 rounded-lg hover:bg-red-700 transition-colors"
+                        className="bg-white text-purple-600 py-2 px-4 rounded-lg hover:bg-gray-100 transition-colors font-medium"
                     >
                         Retry
                     </button>
@@ -352,11 +352,11 @@ export function MainApp() {
     // Displays profile summary, quick access cards, and navigation buttons.
     
     return (
-        <div className="p-4 max-w-md mx-auto">
+        <div className="min-h-screen p-4 max-w-md mx-auto">
             {/* Page Header */}
-            <div className="text-center mb-6">
-                <h1 className="text-2xl font-bold mb-2">Style$ync</h1>
-                <p className="text-gray-600">Welcome back, {currentUser?.displayName || 'User'}!</p>
+            <div className="text-center mb-6 pt-4">
+                <h1 className="text-2xl font-bold mb-2 text-white">Style$ync</h1>
+                <p className="text-white/80">Welcome back, {currentUser?.displayName || 'User'}!</p>
             </div>
 
             <div className="space-y-4">

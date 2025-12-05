@@ -38,6 +38,30 @@ export function useAuth() {
   
   // Cache for in-flight token fetch promise to prevent duplicate concurrent requests
   const tokenFetchPromiseRef = useRef<Promise<string> | null>(null)
+  
+  // Cache for getSecret() result to avoid rate limiting
+  const secretCacheRef = useRef<{ data: string | null; timestamp: number } | null>(null)
+  const SECRET_CACHE_TTL = 5000 // Cache for 5 seconds
+
+  // Helper to get secret with caching to avoid rate limits
+  const getCachedSecret = useCallback(async (): Promise<string | null> => {
+    const now = Date.now()
+    
+    // Return cached value if still valid
+    if (secretCacheRef.current && (now - secretCacheRef.current.timestamp) < SECRET_CACHE_TTL) {
+      return secretCacheRef.current.data
+    }
+    
+    // Fetch new value
+    try {
+      const stored = await getSecret()
+      secretCacheRef.current = { data: stored, timestamp: now }
+      return stored
+    } catch (error) {
+      console.error('❌ Failed to get secret:', error)
+      return null
+    }
+  }, [getSecret])
 
   // ============================================
   // LOAD STORED TOKEN ON MOUNT
@@ -46,7 +70,7 @@ export function useAuth() {
   useEffect(() => {
     async function loadToken() {
       try {
-        const stored = await getSecret()
+        const stored = await getCachedSecret()
         if (stored) {
           // Handle mock data in localhost (returns "secret-value" string)
           try {
@@ -61,6 +85,8 @@ export function useAuth() {
             } else {
               // Token expired or expiring soon, clear it
               await removeSecret()
+              // Clear cache
+              secretCacheRef.current = null
               console.log('⏰ Stored token expired, cleared from storage')
             }
           } catch (parseError) {
@@ -75,7 +101,7 @@ export function useAuth() {
       }
     }
     loadToken()
-  }, [getSecret, removeSecret])
+  }, [getCachedSecret, removeSecret])
 
   // ============================================
   // GET OR REFRESH JWT TOKEN
@@ -95,9 +121,17 @@ export function useAuth() {
       return tokenFetchPromiseRef.current
     }
 
-    // SECOND: Check secure storage FIRST (shared cache - all hook instances share this)
-    // This ensures that if App.tsx already fetched a token, useProductFeedSync can reuse it
-    const stored = await getSecret()
+    // SECOND: Check in-memory state first (fastest, no API call)
+    if (jwtToken && authData) {
+      // Check if token is still valid (with 1 day buffer)
+      if (authData.expiresAt > Date.now() + 86400000) {
+        console.log('✅ Using existing JWT token from memory')
+        return jwtToken
+      }
+    }
+
+    // THIRD: Check secure storage (with caching to avoid rate limits)
+    const stored = await getCachedSecret()
     if (stored) {
       try {
         const data: AuthData = JSON.parse(stored)
@@ -111,24 +145,6 @@ export function useAuth() {
         }
       } catch (parseError) {
         console.log('⚠️ Token parse error, fetching new token')
-      }
-    }
-
-    // THIRD: Check in-memory state (fallback, but storage check above should catch it)
-    if (jwtToken) {
-      const stored = await getSecret()
-      if (stored) {
-        try {
-          const data: AuthData = JSON.parse(stored)
-          // If expires in more than 1 day, use existing token
-          if (data.expiresAt > Date.now() + 86400000) {
-            console.log('✅ Using existing JWT token')
-            setAuthData(data)
-            return jwtToken
-          }
-        } catch (parseError) {
-          console.log('⚠️ Token parse error, fetching new token')
-        }
       }
     }
 
@@ -149,19 +165,26 @@ export function useAuth() {
       // Step 1: Get Shop Mini token from SDK or reuse stored one
       console.log('📱 Step 1: Getting Shop Mini token...')
       
-      // Check if we have a stored Shop Mini token
-      const stored = await getSecret()
+      // Check if we have a stored Shop Mini token (use cached secret to avoid rate limit)
       let shopMiniToken: string | undefined
       
-      if (stored) {
-        try {
-          const data: AuthData = JSON.parse(stored)
-          if (data.shopMiniToken) {
-            console.log('♻️ Reusing stored Shop Mini token for consistent hash')
-            shopMiniToken = data.shopMiniToken
+      // First check in-memory authData
+      if (authData?.shopMiniToken) {
+        console.log('♻️ Reusing Shop Mini token from memory')
+        shopMiniToken = authData.shopMiniToken
+      } else {
+        // Fallback to cached secret check
+        const stored = await getCachedSecret()
+        if (stored) {
+          try {
+            const data: AuthData = JSON.parse(stored)
+            if (data.shopMiniToken) {
+              console.log('♻️ Reusing stored Shop Mini token for consistent hash')
+              shopMiniToken = data.shopMiniToken
+            }
+          } catch (parseError) {
+            console.log('⚠️ Could not parse stored data')
           }
-        } catch (parseError) {
-          console.log('⚠️ Could not parse stored data')
         }
       }
       
@@ -225,6 +248,8 @@ export function useAuth() {
       }
       
       await setSecret({ value: JSON.stringify(authData) })
+      // Update cache with new data
+      secretCacheRef.current = { data: JSON.stringify(authData), timestamp: Date.now() }
       setJwtToken(token)
       setAuthData(authData)
       console.log('💾 Token stored securely')
@@ -247,7 +272,7 @@ export function useAuth() {
     })()
 
     return tokenFetchPromiseRef.current
-  }, [jwtToken, generateUserToken, getSecret, setSecret])
+  }, [jwtToken, authData, generateUserToken, getCachedSecret, setSecret])
 
   // ============================================
   // CLEAR AUTHENTICATION
@@ -259,6 +284,8 @@ export function useAuth() {
   const clearAuth = useCallback(async () => {
     console.log('Clearing authentication')
     await removeSecret()
+    // Clear cache
+    secretCacheRef.current = null
     setJwtToken(null)
     setAuthData(null)
     // Clear any in-flight token fetch promise

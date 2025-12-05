@@ -183,7 +183,7 @@ export function FeedPage({ onBack }: FeedPageProps) {
         : 'User'
     
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-500 via-purple-600 to-indigo-700">
+      <div className="min-h-screen ">
         <div className="p-4 max-w-md mx-auto">
           {/* Header */}
           <div className="flex items-center mb-6 pt-2">

@@ -68,33 +68,33 @@ export function FriendsPage({ onBack }: FriendsPageProps) {
     }
 
     return (
-        <div className="p-4 max-w-md mx-auto">
+        <div className="min-h-screen  p-4 max-w-md mx-auto">
             {/* Header */}
-            <div className="flex items-center mb-6">
+            <div className="flex items-center mb-6 pt-4">
                 <button 
                     onClick={onBack}
-                    className="mr-3 p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                    className="mr-3 px-4 py-2.5 rounded-2xl backdrop-blur-xl bg-white/20 border border-white/30 shadow-lg hover:bg-white/30 active:scale-95 transition-all duration-200 text-white font-medium"
                 >
                     ← Back
                 </button>
-                <h1 className="text-2xl font-bold">Friends</h1>
+                <h1 className="text-2xl font-bold text-white">Friends</h1>
             </div>
 
             {/* Error Display */}
             {error && (
-                <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded text-red-700 text-sm">
+                <div className="mb-4 p-3 bg-white/10 backdrop-blur-sm border border-white/20 rounded text-white text-sm">
                     {error}
                 </div>
             )}
 
             {/* Tabs */}
-            <div className="flex mb-6 bg-gray-100 rounded-lg p-1">
+            <div className="flex mb-6 bg-white/10 backdrop-blur-sm rounded-lg p-1 border border-white/20">
                 <button
                     onClick={() => setActiveTab('send')}
                     className={`flex-1 py-2 px-4 rounded-md transition-colors ${
                         activeTab === 'send' 
-                            ? 'bg-white text-purple-600 shadow-sm' 
-                            : 'text-gray-600 hover:text-gray-800'
+                            ? 'bg-white text-purple-600 shadow-sm font-medium' 
+                            : 'text-white/80 hover:text-white'
                     }`}
                 >
                     Send Request
@@ -103,8 +103,8 @@ export function FriendsPage({ onBack }: FriendsPageProps) {
                     onClick={() => setActiveTab('received')}
                     className={`flex-1 py-2 px-4 rounded-md transition-colors ${
                         activeTab === 'received' 
-                            ? 'bg-white text-purple-600 shadow-sm' 
-                            : 'text-gray-600 hover:text-gray-800'
+                            ? 'bg-white text-purple-600 shadow-sm font-medium' 
+                            : 'text-white/80 hover:text-white'
                     }`}
                 >
                     Received ({receivedRequests.length})
@@ -113,8 +113,8 @@ export function FriendsPage({ onBack }: FriendsPageProps) {
                     onClick={() => setActiveTab('friends')}
                     className={`flex-1 py-2 px-4 rounded-md transition-colors ${
                         activeTab === 'friends' 
-                            ? 'bg-white text-purple-600 shadow-sm' 
-                            : 'text-gray-600 hover:text-gray-800'
+                            ? 'bg-white text-purple-600 shadow-sm font-medium' 
+                            : 'text-white/80 hover:text-white'
                     }`}
                 >
                     Friends ({friends.length})

@@ -149,20 +149,20 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps) {
     
     if (loading) {
         return (
-            <div className="flex items-center justify-center min-h-screen p-4">
-                <p className="text-lg">Loading user data...</p>
+            <div className="min-h-screen flex items-center justify-center p-4">
+                <p className="text-lg text-white">Loading user data...</p>
             </div>
         )
     }
     
     return (
-        <div className="p-4 max-w-md mx-auto">
+        <div className="min-h-screen  p-4 max-w-md mx-auto">
             <Card className="p-6">
                 <form onSubmit={handleSubmit}>
                     {/* Header */}
                     <div className="text-center mb-6">
-                        <h1 className="text-2xl font-bold mb-2">Welcome to Style$ync</h1>
-                        <p className="text-gray-600">Let's set up your style profile</p>
+                        <h1 className="text-2xl font-bold mb-2 text-white">Welcome to Style$ync</h1>
+                        <p className="text-white/80">Let's set up your style profile</p>
                     </div>
                     
                     {/* User Info Display */}
