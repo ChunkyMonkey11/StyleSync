@@ -313,9 +313,9 @@ export function MainApp() {
     if (currentView === 'profile-edit') {
         return (
             <ProfileEditPage 
-                onBack={() => setCurrentView('profile')} 
+                onBack={() => setCurrentView('main')} 
                 onSave={() => {
-                    setCurrentView('profile')
+                    setCurrentView('main')
                     // Refresh profile data after saving to show updated info
                     fetchUserProfile()
                 }}
@@ -411,7 +411,11 @@ export function MainApp() {
                 <div className="flex flex-col items-center">
                     {/* Profile Picture Container */}
                     <div className="relative mb-4">
-                        <div className="w-[135px] h-[135px] rounded-full border-4 border-white/30 shadow-lg overflow-hidden">
+                        <button
+                            onClick={() => setCurrentView('profile')}
+                            className="w-[135px] h-[135px] rounded-full border-4 border-white/30 shadow-lg overflow-hidden cursor-pointer hover:opacity-90 transition-opacity"
+                            aria-label="View Profile"
+                        >
                             {getProfilePicture() ? (
                                 <img
                                     src={getProfilePicture()!}
@@ -425,11 +429,14 @@ export function MainApp() {
                                     </span>
                                 </div>
                             )}
-                        </div>
+                        </button>
                         
                         {/* Edit Pencil Icon - Positioned outside/on top of the border */}
                         <button
-                            onClick={handleEditProfile}
+                            onClick={(e) => {
+                                e.stopPropagation()
+                                handleEditProfile()
+                            }}
                             className="absolute -top-1 -right-1 w-7 h-7 bg-white rounded-full flex items-center justify-center shadow-md hover:bg-gray-50 transition-colors active:scale-95 z-10"
                             aria-label="Edit Profile"
                         >
