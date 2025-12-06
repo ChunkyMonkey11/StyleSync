@@ -99,6 +99,8 @@ import { ProfilePage } from './user_profile/ProfilePage'
 import { ProfileEditPage } from './user_profile/ProfileEditPage'
 import { FeedPage } from './feeds/FeedPage'
 import { useAuth } from '../hooks/useAuth'
+import { useFriendRequests } from '../hooks/useFriendRequests'
+import pencilIcon from '../pencil.png'
 
 /**
  * UserProfile interface
@@ -139,6 +141,9 @@ export function MainApp() {
     
     /** Auth hook - provides JWT token for API calls */
     const { getValidToken } = useAuth()
+    
+    /** Friends hook - provides friends list and count */
+    const { friends } = useFriendRequests()
 
     // ============================================
     // STATE MANAGEMENT
@@ -167,6 +172,7 @@ export function MainApp() {
      * Displays error message and retry button if fetch fails.
      */
     const [error, setError] = useState<string | null>(null)
+    
 
     // ============================================
     // EFFECTS
@@ -179,6 +185,7 @@ export function MainApp() {
     useEffect(() => {
         fetchUserProfile()
     }, [])
+    
 
     // ============================================
     // API FUNCTIONS
@@ -239,6 +246,36 @@ export function MainApp() {
             setIsLoading(false)
         }
     }
+
+    // ============================================
+    // HERO SECTION HANDLERS
+    // ============================================
+    
+    /**
+     * Handles edit profile button click.
+     * Navigates to profile-edit page.
+     */
+    const handleEditProfile = () => {
+        setCurrentView('profile-edit')
+    }
+    
+    /**
+     * Gets profile picture URL with fallback.
+     */
+    const getProfilePicture = () => {
+        if (profile?.profile_pic) {
+            return profile.profile_pic
+        }
+        if (currentUser?.avatarImage?.url) {
+            return currentUser.avatarImage.url
+        }
+        return null
+    }
+    
+    /**
+     * Gets friends count for quick stats.
+     */
+    const friendsCount = friends.length
 
     // ============================================
     // CONDITIONAL VIEW RENDERING
@@ -309,6 +346,16 @@ export function MainApp() {
                     <h1 className="text-2xl font-bold mb-2 text-white">Style$ync</h1>
                     <p className="text-white/80">Loading your profile...</p>
                 </div>
+                
+                {/* Hero Section Skeleton */}
+                <div className="mb-8">
+                    <div className="flex flex-col items-center">
+                        <div className="w-[135px] h-[135px] rounded-full border-4 border-white/30 bg-white/10 animate-pulse mb-4"></div>
+                        <div className="h-6 w-32 bg-white/10 rounded animate-pulse mb-2"></div>
+                        <div className="h-4 w-24 bg-white/10 rounded animate-pulse"></div>
+                    </div>
+                </div>
+                
                 <div className="space-y-4">
                     {[1, 2, 3, 4].map((i) => (
                         <div key={i} className="bg-white/10 backdrop-blur-sm p-4 rounded-lg border border-white/20 shadow-lg animate-pulse">
@@ -359,32 +406,60 @@ export function MainApp() {
                 <p className="text-white/80">Welcome back, {currentUser?.displayName || 'User'}!</p>
             </div>
 
-            <div className="space-y-4">
-                {/* Profile Card - Shows user's profile summary */}
-                <div className="bg-white p-4 rounded-lg border shadow-sm">
-                    <div className="flex items-center justify-between mb-2">
-                        <h2 className="font-semibold">Your Style Profile</h2>
-                        <button 
-                            onClick={() => setCurrentView('profile')}
-                            className="text-purple-600 hover:text-purple-700 text-sm font-medium"
+            {/* Hero Profile Section */}
+            <div className="mb-8">
+                <div className="flex flex-col items-center">
+                    {/* Profile Picture Container */}
+                    <div className="relative mb-4">
+                        <div className="w-[135px] h-[135px] rounded-full border-4 border-white/30 shadow-lg overflow-hidden">
+                            {getProfilePicture() ? (
+                                <img
+                                    src={getProfilePicture()!}
+                                    alt={profile?.username || 'Profile'}
+                                    className="w-full h-full object-cover"
+                                />
+                            ) : (
+                                <div className="w-full h-full bg-purple-500 flex items-center justify-center">
+                                    <span className="text-white text-4xl font-bold">
+                                        {profile?.username?.[0]?.toUpperCase() || currentUser?.displayName?.[0]?.toUpperCase() || 'U'}
+                                    </span>
+                                </div>
+                            )}
+                        </div>
+                        
+                        {/* Edit Pencil Icon - Positioned outside/on top of the border */}
+                        <button
+                            onClick={handleEditProfile}
+                            className="absolute -top-1 -right-1 w-7 h-7 bg-white rounded-full flex items-center justify-center shadow-md hover:bg-gray-50 transition-colors active:scale-95 z-10"
+                            aria-label="Edit Profile"
                         >
-                            View Profile
+                            <img
+                                src={pencilIcon}
+                                alt="Edit Profile"
+                                className="w-3.5 h-3.5 object-contain"
+                            />
                         </button>
                     </div>
-                    {profile ? (
-                        <div className="space-y-2">
-                            <p className="text-sm text-gray-600">
-                                <span className="font-medium">@{profile.username}</span>
-                                {profile.bio && ` • ${profile.bio}`}
-                            </p>
-                            <p className="text-xs text-gray-500">
-                                Member since {new Date(profile.created_at).toLocaleDateString()}
-                            </p>
-                        </div>
-                    ) : (
-                        <p className="text-sm text-gray-600">Profile created successfully!</p>
+                    
+                    {/* Username */}
+                    {profile && (
+                        <h2 className="text-white text-xl font-medium mb-2">
+                            @{profile.username}
+                        </h2>
                     )}
+                    
+                    {/* Quick Stats */}
+                    <div className="text-white/80 text-sm">
+                        {friendsCount === 0 ? (
+                            <span>No friends yet</span>
+                        ) : (
+                            <span>{friendsCount} {friendsCount === 1 ? 'Friend' : 'Friends'}</span>
+                        )}
+                    </div>
                 </div>
+            </div>
+
+            <div className="space-y-4">
 
                 {/* Style Preferences Card - Displays user's selected style preferences */}
                 <div className="bg-white p-4 rounded-lg border shadow-sm">

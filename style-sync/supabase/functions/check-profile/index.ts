@@ -14,17 +14,34 @@ Deno.serve(async (req) => {
   // ============================================
   // Browser checks if cross-origin requests are allowed
   if (req.method === 'OPTIONS') {
-    return handleCors(req)
+    try {
+      const corsResponse = handleCors(req)
+      if (corsResponse) {
+        return corsResponse
+      }
+      // Fallback if handleCors returns null
+      return new Response(null, {
+        status: 200,
+        headers: corsHeaders()
+      })
+    } catch (error) {
+      console.error('Error handling OPTIONS request:', error)
+      // Always return success for OPTIONS even if there's an error
+      return new Response(null, {
+        status: 200,
+        headers: corsHeaders()
+      })
+    }
   }
 
-  // ============================================
-  // STEP 2: VERIFY HTTP METHOD
-  // ============================================
-  // This endpoint only accepts GET requests
-  const methodCheck = requireMethod(req, 'GET')
-  if (methodCheck) return methodCheck
-
   try {
+    // ============================================
+    // STEP 2: VERIFY HTTP METHOD
+    // ============================================
+    // This endpoint only accepts GET requests
+    const methodCheck = requireMethod(req, 'GET')
+    if (methodCheck) return methodCheck
+
     // ============================================
     // STEP 3: VERIFY JWT TOKEN
     // ============================================
@@ -136,4 +153,3 @@ Deno.serve(async (req) => {
 // Then test this endpoint:
 // curl -X GET https://fhyisvyhahqxryanjnby.supabase.co/functions/v1/check-profile \
 //   -H "Authorization: Bearer YOUR_JWT_TOKEN"
-

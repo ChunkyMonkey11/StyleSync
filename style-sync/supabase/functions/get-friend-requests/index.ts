@@ -15,7 +15,24 @@ Deno.serve(async (req) => {
   // STEP 1: HANDLE CORS PREFLIGHT
   // ============================================
   if (req.method === 'OPTIONS') {
-    return handleCors(req)
+    try {
+      const corsResponse = handleCors(req)
+      if (corsResponse) {
+        return corsResponse
+      }
+      // Fallback if handleCors returns null
+      return new Response(null, {
+        status: 200,
+        headers: corsHeaders()
+      })
+    } catch (error) {
+      console.error('Error handling OPTIONS request:', error)
+      // Always return success for OPTIONS even if there's an error
+      return new Response(null, {
+        status: 200,
+        headers: corsHeaders()
+      })
+    }
   }
 
   // ============================================

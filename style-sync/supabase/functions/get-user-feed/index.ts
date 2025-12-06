@@ -12,7 +12,22 @@ import { errorResponse, successResponse, requireMethod } from '../_shared/respon
 Deno.serve(async (req) => {
   // CORS preflight
   if (req.method === 'OPTIONS') {
-    return handleCors(req)
+    try {
+      const corsResponse = handleCors(req)
+      if (corsResponse) {
+        return corsResponse
+      }
+      return new Response(null, {
+        status: 200,
+        headers: corsHeaders()
+      })
+    } catch (error) {
+      console.error('Error handling OPTIONS request:', error)
+      return new Response(null, {
+        status: 200,
+        headers: corsHeaders()
+      })
+    }
   }
 
   // Require GET

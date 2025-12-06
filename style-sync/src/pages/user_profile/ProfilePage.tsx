@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
-import { useCurrentUser, Card, Button, Image } from '@shopify/shop-minis-react'
+import { Card, Button, Image } from '@shopify/shop-minis-react'
 import { useAuth } from '../../hooks/useAuth'
+import { useFriendRequests } from '../../hooks/useFriendRequests'
 
 interface UserProfile {
     id: string
@@ -21,11 +22,14 @@ interface ProfilePageProps {
 }
 
 export function ProfilePage({ onBack, onEdit }: ProfilePageProps) {
-    const { currentUser } = useCurrentUser()
     const { getValidToken } = useAuth()
+    const { friends } = useFriendRequests()
     const [profile, setProfile] = useState<UserProfile | null>(null)
     const [isLoading, setIsLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
+    
+    // Get friends count
+    const friendsCount = friends.length
 
     // Fetch user profile on mount
     useEffect(() => {
@@ -131,7 +135,7 @@ export function ProfilePage({ onBack, onEdit }: ProfilePageProps) {
                 <h1 className="text-2xl font-bold text-white">Profile</h1>
             </div>
 
-            <div className="space-y-4">
+            <div className="space-y-6">
                 {/* Profile Header Card */}
                 <Card className="p-6 text-center">
                     {/* Profile Picture */}
@@ -165,53 +169,55 @@ export function ProfilePage({ onBack, onEdit }: ProfilePageProps) {
                 </Card>
 
                 {/* Style Preferences Card */}
-                <Card className="p-4">
-                    <h3 className="font-semibold mb-3">Style Preferences</h3>
+                <Card className="p-5">
+                    <h3 className="font-semibold mb-4">Style Preferences</h3>
                     {profile?.style_preferences && profile.style_preferences.length > 0 ? (
-                        <div className="flex flex-wrap gap-2">
-                            {profile.style_preferences.map((preference, index) => (
-                                <span 
-                                    key={index}
-                                    className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded"
-                                >
-                                    {preference}
-                                </span>
-                            ))}
+                        <div className="overflow-x-auto scrollbar-hide -mx-5 px-5">
+                            <div className="flex gap-3 whitespace-nowrap">
+                                {profile.style_preferences.map((preference, index) => (
+                                    <span 
+                                        key={index}
+                                        className="px-3 py-1.5 bg-blue-100 text-blue-800 text-xs rounded-full flex-shrink-0"
+                                    >
+                                        {preference}
+                                    </span>
+                                ))}
+                            </div>
                         </div>
                     ) : (
-                        <p className="text-sm text-gray-500">No style preferences set</p>
+                        <p className="text-sm text-gray-500">No style preferences set. Add some in Edit Profile!</p>
                     )}
                 </Card>
 
                 {/* Interests Card */}
-                {profile?.interests && profile.interests.length > 0 && (
-                    <Card className="p-4">
-                        <h3 className="font-semibold mb-3">Interests</h3>
-                        <div className="flex flex-wrap gap-2">
-                            {profile.interests.map((interest, index) => (
-                                <span 
-                                    key={index}
-                                    className="px-2 py-1 bg-purple-100 text-purple-800 text-xs rounded"
-                                >
-                                    {interest}
-                                </span>
-                            ))}
+                <Card className="p-5">
+                    <h3 className="font-semibold mb-4">Interests</h3>
+                    {profile?.interests && profile.interests.length > 0 ? (
+                        <div className="overflow-x-auto scrollbar-hide -mx-5 px-5">
+                            <div className="flex gap-3 whitespace-nowrap">
+                                {profile.interests.map((interest, index) => (
+                                    <span 
+                                        key={index}
+                                        className="px-3 py-1.5 bg-purple-100 text-purple-800 text-xs rounded-full flex-shrink-0"
+                                    >
+                                        {interest}
+                                    </span>
+                                ))}
+                            </div>
                         </div>
-                    </Card>
-                )}
+                    ) : (
+                        <p className="text-sm text-gray-500">No interests set. Add some in Edit Profile!</p>
+                    )}
+                </Card>
 
                 {/* Profile Stats Card */}
-                <Card className="p-4">
-                    <h3 className="font-semibold mb-3">Profile Stats</h3>
-                    <div className="grid grid-cols-2 gap-4 text-center">
-                        <div>
-                            <p className="text-2xl font-bold text-purple-600">0</p>
-                            <p className="text-sm text-gray-600">Posts</p>
-                        </div>
-                        <div>
-                            <p className="text-2xl font-bold text-purple-600">0</p>
-                            <p className="text-sm text-gray-600">Friends</p>
-                        </div>
+                <Card className="p-5">
+                    <h3 className="font-semibold mb-4">Profile Stats</h3>
+                    <div className="text-center">
+                        <p className="text-3xl font-bold text-purple-600">{friendsCount}</p>
+                        <p className="text-sm text-gray-600 mt-1">
+                            {friendsCount === 1 ? 'Friend' : 'Friends'}
+                        </p>
                     </div>
                 </Card>
 

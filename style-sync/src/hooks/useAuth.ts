@@ -45,6 +45,12 @@ export function useAuth() {
 
   // Helper to get secret with caching to avoid rate limits
   const getCachedSecret = useCallback(async (): Promise<string | null> => {
+    // Guard: ensure getSecret is available
+    if (!getSecret) {
+      console.warn('⚠️ getSecret not yet initialized')
+      return null
+    }
+    
     const now = Date.now()
     
     // Return cached value if still valid
@@ -131,20 +137,22 @@ export function useAuth() {
     }
 
     // THIRD: Check secure storage (with caching to avoid rate limits)
-    const stored = await getCachedSecret()
-    if (stored) {
-      try {
-        const data: AuthData = JSON.parse(stored)
-        // If expires in more than 1 day, use existing token from storage
-        if (data.expiresAt > Date.now() + 86400000) {
-          console.log('✅ Using existing JWT token from storage')
-          // Update this instance's in-memory state for consistency
-          setJwtToken(data.token)
-          setAuthData(data)
-          return data.token
+    if (getCachedSecret) {
+      const stored = await getCachedSecret()
+      if (stored) {
+        try {
+          const data: AuthData = JSON.parse(stored)
+          // If expires in more than 1 day, use existing token from storage
+          if (data.expiresAt > Date.now() + 86400000) {
+            console.log('✅ Using existing JWT token from storage')
+            // Update this instance's in-memory state for consistency
+            setJwtToken(data.token)
+            setAuthData(data)
+            return data.token
+          }
+        } catch (parseError) {
+          console.log('⚠️ Token parse error, fetching new token')
         }
-      } catch (parseError) {
-        console.log('⚠️ Token parse error, fetching new token')
       }
     }
 
@@ -172,8 +180,8 @@ export function useAuth() {
       if (authData?.shopMiniToken) {
         console.log('♻️ Reusing Shop Mini token from memory')
         shopMiniToken = authData.shopMiniToken
-      } else {
-        // Fallback to cached secret check
+      } else if (getCachedSecret) {
+        // Fallback to cached secret check - only if getCachedSecret is available
         const stored = await getCachedSecret()
         if (stored) {
           try {
@@ -215,20 +223,24 @@ export function useAuth() {
 
       console.log('📡 Auth response status:', response.status)
 
+      // If the response is not ok, throw an error
       if (!response.ok) {
         const errorText = await response.text()
         console.error('❌ Auth failed:', response.status, errorText)
         throw new Error(`Authentication failed: ${response.status} ${errorText}`)
       }
 
+      // If the response is ok, parse the JSON
       const authResponse = await response.json()
       const { token, expiresIn, publicId, hasProfile, profile } = authResponse
       
+      // If the token is not present, throw an error
       if (!token) {
         console.error('❌ No token in response')
         throw new Error('No token returned from auth endpoint')
       }
 
+      // We have the token, so we can store it securely
       console.log('✅ Got JWT token, expires in', expiresIn, 'seconds')
       if (publicId) {
         console.log('👤 PublicId:', publicId)
@@ -238,7 +250,7 @@ export function useAuth() {
       }
 
       // Step 3: Store JWT token securely with profile info
-      const authData: AuthData = {
+      const newAuthData: AuthData = {
         token,
         expiresAt: Date.now() + (expiresIn * 1000),  // Convert seconds to milliseconds
         shopMiniToken,  // Store for consistency
@@ -247,11 +259,11 @@ export function useAuth() {
         profile         // Store profile data if available
       }
       
-      await setSecret({ value: JSON.stringify(authData) })
+      await setSecret({ value: JSON.stringify(newAuthData) })
       // Update cache with new data
-      secretCacheRef.current = { data: JSON.stringify(authData), timestamp: Date.now() }
+      secretCacheRef.current = { data: JSON.stringify(newAuthData), timestamp: Date.now() }
       setJwtToken(token)
-      setAuthData(authData)
+      setAuthData(newAuthData)
       console.log('💾 Token stored securely')
       
       return token

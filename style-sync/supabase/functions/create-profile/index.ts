@@ -26,7 +26,22 @@ interface UserProfile {
 Deno.serve(async (req) => {
   // Step 1: Handle CORS preflight requests (browsers send these before POST)
   if (req.method === 'OPTIONS') {
-    return handleCors(req)
+    try {
+      const corsResponse = handleCors(req)
+      if (corsResponse) {
+        return corsResponse
+      }
+      return new Response(null, {
+        status: 200,
+        headers: corsHeaders()
+      })
+    } catch (error) {
+      console.error('Error handling OPTIONS request:', error)
+      return new Response(null, {
+        status: 200,
+        headers: corsHeaders()
+      })
+    }
   }
 
   // Step 2: Verify this is a POST request

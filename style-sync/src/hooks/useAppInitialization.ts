@@ -83,41 +83,59 @@ export function useAppInitialization(): UseAppInitializationReturn {
 
       // Step 2: Check profile status
       console.log('📋 Step 2: Checking profile...')
-      let hasProfile = false
+      let hasProfile: boolean | undefined = undefined
       let publicId: string | undefined
 
       // Try to get hasProfile from authData first
       if (authData) {
-        hasProfile = authData.hasProfile ?? false
         publicId = authData.publicId
-        console.log('✅ Got profile status from authData:', hasProfile)
+        // Only use authData.hasProfile if it's explicitly set (not undefined)
+        if (authData.hasProfile !== undefined) {
+          hasProfile = authData.hasProfile
+          console.log('✅ Got profile status from authData:', hasProfile)
+        } else {
+          console.log('⚠️ authData exists but hasProfile is undefined, will check endpoint')
+        }
       }
 
-      // If authData doesn't have hasProfile, fallback to check-profile endpoint
-      if (authData?.hasProfile === undefined) {
-        console.log('📡 Falling back to check-profile endpoint...')
-        const response = await fetch(
-          'https://fhyisvyhahqxryanjnby.supabase.co/functions/v1/check-profile',
-          {
-            method: 'GET',
-            headers: {
-              'Authorization': `Bearer ${token}`,
-              'Content-Type': 'application/json'
+      // If we don't have hasProfile yet (either no authData or hasProfile was undefined), check endpoint
+      if (hasProfile === undefined) {
+        console.log('📡 Checking profile via check-profile endpoint...')
+        try {
+          const response = await fetch(
+            'https://fhyisvyhahqxryanjnby.supabase.co/functions/v1/check-profile',
+            {
+              method: 'GET',
+              headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+              }
             }
+          )
+
+          if (!response.ok) {
+            const errorText = await response.text()
+            console.error('❌ check-profile failed:', response.status, errorText)
+            // Default to false if check fails (show onboarding)
+            hasProfile = false
+          } else {
+            const result = await response.json()
+            hasProfile = result.hasProfile ?? false
+            if (result.profile?.shop_public_id) {
+              publicId = result.profile.shop_public_id
+            }
+            console.log('✅ Got profile status from check-profile:', hasProfile)
           }
-        )
-
-        if (!response.ok) {
-          const errorText = await response.text()
-          throw new Error(`Failed to check profile: ${response.status} ${errorText}`)
+        } catch (error) {
+          console.error('❌ Error calling check-profile:', error)
+          // Default to false if check fails (show onboarding)
+          hasProfile = false
         }
-
-        const result = await response.json()
-        hasProfile = result.hasProfile ?? false
-        if (result.profile?.shop_public_id) {
-          publicId = result.profile.shop_public_id
-        }
-        console.log('✅ Got profile status from check-profile:', hasProfile)
+      }
+      
+      // Ensure hasProfile is always a boolean
+      if (hasProfile === undefined) {
+        hasProfile = false
       }
 
       // Step 3: Fetch friends (non-blocking - can fail gracefully)
@@ -139,7 +157,7 @@ export function useAppInitialization(): UseAppInitializationReturn {
         if (friendsResponse.ok) {
           const friendsResult = await friendsResponse.json()
           friendsData = friendsResult.friends || []
-          console.log('✅ Friends fetched:', friendsData.length)
+          console.log('✅ Friends fetched:', friendsData?.length ?? 0)
         } else {
           console.warn('⚠️ Friends fetch returned non-OK status:', friendsResponse.status)
         }
@@ -166,7 +184,7 @@ export function useAppInitialization(): UseAppInitializationReturn {
       const data = {
         hasProfile,
         publicId,
-        friends: friendsData
+        friends: friendsData || []
       }
       
       setInitializationData(data)
