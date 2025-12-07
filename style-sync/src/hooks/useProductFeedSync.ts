@@ -11,12 +11,12 @@ import { useAuth } from './useAuth'
 
 const INITIAL_PAGE_SIZE = 20
 const PAGINATION_PAGE_SIZE = 20
-const MAX_PRODUCTS_PER_SOURCE = 100
-const MAX_LISTS = 60
-const MAX_ORDERS = 60
-const MAX_RECENT_PRODUCTS = 100
-const MAX_RECOMMENDED_PRODUCTS = 100
-const MAX_FOLLOWED_SHOPS = 120
+const MAX_PRODUCTS_PER_SOURCE = 300
+const MAX_LISTS = 180
+const MAX_ORDERS = 180
+const MAX_RECENT_PRODUCTS = 300
+const MAX_RECOMMENDED_PRODUCTS = 300
+const MAX_FOLLOWED_SHOPS = 360
 
 interface PageInfoLike {
   hasNextPage?: boolean
