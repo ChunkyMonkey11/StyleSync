@@ -46,6 +46,8 @@ export function FriendsPage({ onBack }: FriendsPageProps) {
     const handleAcceptRequest = async (requestId: string) => {
         try {
             await acceptFriendRequest(requestId)
+            // Switch to friends tab immediately after accepting
+            setActiveTab('friends')
         } catch (error) {
             // Error is handled by the hook
         }
