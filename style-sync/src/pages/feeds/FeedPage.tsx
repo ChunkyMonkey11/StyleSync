@@ -312,36 +312,66 @@ export function FeedPage({ onBack }: FeedPageProps) {
   // Default view: Friends list
   return (
     <div className="p-4 max-w-md mx-auto">
+      <style>{`
+        @keyframes slideUpFade {
+          from {
+            opacity: 0;
+            transform: translateY(20px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        
+        .feed-card {
+          animation: slideUpFade 0.5s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+        }
+        
+        .feed-card:nth-child(1) { animation-delay: 0.05s; }
+        .feed-card:nth-child(2) { animation-delay: 0.1s; }
+        .feed-card:nth-child(3) { animation-delay: 0.15s; }
+        .feed-card:nth-child(4) { animation-delay: 0.2s; }
+        .feed-card:nth-child(5) { animation-delay: 0.25s; }
+        .feed-card:nth-child(6) { animation-delay: 0.3s; }
+      `}</style>
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-8 pt-6">
         <div className="flex items-center">
           <button 
             onClick={onBack}
-            className="mr-3 p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            className="mr-4 px-5 py-3 rounded-2xl backdrop-blur-xl bg-white/10 border border-white/20 shadow-lg hover:bg-white/20 active:scale-95 transition-all duration-200 text-white font-medium"
+            style={{
+              boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.1), inset 0 1px 0 0 rgba(255, 255, 255, 0.2)'
+            }}
           >
             ← Back
           </button>
-          <h1 className="text-2xl font-bold">Feeds</h1>
+          <h1 className="text-3xl font-bold text-white tracking-tight" style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>Feeds</h1>
         </div>
         {syncError && (
-          <span className="text-xs text-red-600">Sync failed</span>
+          <span className="text-xs text-red-200 bg-red-500/20 px-3 py-1.5 rounded-xl backdrop-blur-sm border border-red-500/30 font-medium">Sync failed</span>
         )}
       </div>
 
       {/* Sync Status */}
       {isSyncing && (
-        <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded text-blue-700 text-sm">
-          Syncing your feed...
+        <div className="mb-4 p-4 backdrop-blur-xl bg-blue-500/20 border border-blue-400/30 rounded-2xl text-blue-100 text-sm shadow-lg">
+          <div className="flex items-center gap-3">
+            <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse"></div>
+            <span className="font-medium">Syncing your feed...</span>
+          </div>
         </div>
       )}
 
       {/* Friends List */}
       {friendsLoading ? (
-        <div className="space-y-4">
-          {[1, 2, 3].map(i => (
-            <div key={i} className="bg-white p-4 rounded-lg border shadow-sm animate-pulse">
-              <div className="h-12 bg-gray-200 rounded-full w-12 mb-2"></div>
-              <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+        <div className="grid grid-cols-2 gap-4">
+          {[1, 2, 3, 4].map(i => (
+            <div key={i} className="backdrop-blur-xl bg-white/10 border border-white/20 rounded-2xl shadow-lg p-5 animate-pulse">
+              <div className="w-20 h-20 bg-white/20 rounded-full mx-auto mb-3"></div>
+              <div className="h-4 bg-white/20 rounded mb-2 w-20 mx-auto"></div>
+              <div className="h-3 bg-white/20 rounded w-16 mx-auto"></div>
             </div>
           ))}
         </div>
@@ -349,78 +379,87 @@ export function FeedPage({ onBack }: FeedPageProps) {
         <div>
           {/* My Feed Card - Always show at top */}
           {myProfile && (
-            <div className="mb-4">
-              <p className="text-sm text-gray-600 mb-3">Your Feed</p>
-              <button
-                onClick={handleMyFeedClick}
-                className="w-full flex items-center p-4 bg-white rounded-lg border shadow-sm hover:bg-gray-50 transition-colors text-left"
-              >
-                {myProfile.profile_pic ? (
-                  <Image 
-                    src={myProfile.profile_pic} 
-                    alt={myProfile.username}
-                    className="w-12 h-12 rounded-full mr-3 object-cover"
-                  />
-                ) : currentUser?.avatarImage?.url ? (
-                  <Image 
-                    src={currentUser.avatarImage.url} 
-                    alt={myProfile.username}
-                    className="w-12 h-12 rounded-full mr-3 object-cover"
-                  />
-                ) : (
-                  <div className="w-12 h-12 rounded-full mr-3 bg-gray-200 flex items-center justify-center">
-                    <span className="text-gray-400 text-lg">
-                      {myProfile.username.charAt(0).toUpperCase()}
-                    </span>
-                  </div>
-                )}
-                <div className="flex-1">
-                  <p className="font-medium">@{myProfile.username}</p>
-                  <p className="text-sm text-gray-600">{myProfile.display_name}</p>
-                </div>
-                <span className="text-gray-400">→</span>
-              </button>
+            <div className="mb-6">
+              <p className="text-lg font-bold text-white mb-4 tracking-tight" style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>Your Feed</p>
+              <div className="grid grid-cols-2 gap-4">
+                <button
+                  onClick={handleMyFeedClick}
+                  className="feed-card flex flex-col items-center p-5 backdrop-blur-xl bg-white/10 border border-white/20 rounded-2xl shadow-lg hover:scale-105 hover:shadow-xl transition-all duration-300 ease-out"
+                  style={{
+                    boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.1), inset 0 1px 0 0 rgba(255, 255, 255, 0.2)'
+                  }}
+                >
+                  {myProfile.profile_pic ? (
+                    <div className="w-20 h-20 rounded-full overflow-hidden shadow-xl mb-3">
+                      <Image 
+                        src={myProfile.profile_pic} 
+                        alt={myProfile.username}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  ) : currentUser?.avatarImage?.url ? (
+                    <div className="w-20 h-20 rounded-full overflow-hidden shadow-xl mb-3">
+                      <Image 
+                        src={currentUser.avatarImage.url} 
+                        alt={myProfile.username}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  ) : (
+                    <div className="w-20 h-20 rounded-full bg-gradient-to-br from-purple-400 via-purple-500 to-purple-600 flex items-center justify-center shadow-xl mb-3">
+                      <span className="text-white text-2xl font-bold" style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
+                        {myProfile.username.charAt(0).toUpperCase()}
+                      </span>
+                    </div>
+                  )}
+                  <p className="text-base font-semibold text-white tracking-tight text-center truncate w-full" style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>@{myProfile.username}</p>
+                  <p className="text-sm font-normal text-white/70 text-center truncate w-full mt-0.5" style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>{myProfile.display_name}</p>
+                </button>
+              </div>
             </div>
           )}
 
           {/* Friends Section */}
           {friends.length > 0 ? (
             <>
-              <p className="text-sm text-gray-600 mb-3">Friends</p>
-              <div className="space-y-3">
-                {friends.map(friend => (
+              <p className="text-lg font-bold text-white mb-4 tracking-tight" style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>Friends</p>
+              <div className="grid grid-cols-2 gap-4">
+                {friends.map((friend, index) => (
                   <button
                     key={friend.id}
                     onClick={() => handleFriendClick(friend.shop_public_id)}
-                    className="w-full flex items-center p-4 bg-white rounded-lg border shadow-sm hover:bg-gray-50 transition-colors text-left"
+                    className={`feed-card flex flex-col items-center p-5 backdrop-blur-xl bg-white/10 border border-white/20 rounded-2xl shadow-lg hover:scale-105 hover:shadow-xl transition-all duration-300 ease-out`}
+                    style={{
+                      boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.1), inset 0 1px 0 0 rgba(255, 255, 255, 0.2)',
+                      animationDelay: `${0.2 + index * 0.05}s`
+                    }}
                   >
                     {friend.friend_profile.profile_pic ? (
-                      <Image 
-                        src={friend.friend_profile.profile_pic} 
-                        alt={friend.friend_profile.username}
-                        className="w-12 h-12 rounded-full mr-3 object-cover"
-                      />
+                      <div className="w-20 h-20 rounded-full overflow-hidden shadow-xl mb-3">
+                        <Image 
+                          src={friend.friend_profile.profile_pic} 
+                          alt={friend.friend_profile.username}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
                     ) : (
-                      <div className="w-12 h-12 rounded-full mr-3 bg-gray-200 flex items-center justify-center">
-                        <span className="text-gray-400 text-lg">
+                      <div className="w-20 h-20 rounded-full bg-gradient-to-br from-purple-400 via-purple-500 to-purple-600 flex items-center justify-center shadow-xl mb-3">
+                        <span className="text-white text-2xl font-bold" style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
                           {friend.friend_profile.username.charAt(0).toUpperCase()}
                         </span>
                       </div>
                     )}
-                    <div className="flex-1">
-                      <p className="font-medium">@{friend.friend_profile.username}</p>
-                      <p className="text-sm text-gray-600">{friend.friend_profile.display_name}</p>
-                    </div>
-                    <span className="text-gray-400">→</span>
+                    <p className="text-base font-semibold text-white tracking-tight text-center truncate w-full" style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>@{friend.friend_profile.username}</p>
+                    <p className="text-sm font-normal text-white/70 text-center truncate w-full mt-0.5" style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>{friend.friend_profile.display_name}</p>
                   </button>
                 ))}
               </div>
             </>
           ) : (
-            <div className="text-center py-8">
-              <div className="text-4xl mb-2">👥</div>
-              <p className="text-sm text-gray-600">No friends yet</p>
-              <p className="text-xs text-gray-500 mt-1">Add friends to see their style feeds!</p>
+            <div className="text-center py-12 backdrop-blur-xl bg-white/10 border border-white/20 rounded-2xl shadow-lg p-8">
+              <div className="text-5xl mb-4">👥</div>
+              <p className="text-lg font-semibold text-white mb-2" style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>No friends yet</p>
+              <p className="text-sm text-white/70" style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>Add friends to see their style feeds!</p>
             </div>
           )}
         </div>
