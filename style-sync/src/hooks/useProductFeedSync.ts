@@ -279,197 +279,197 @@ export function useProductFeedSync(): UseProductFeedSyncReturn {
 
   // Sync function - fetches products and shops, then upserts to backend
   const performSync = useCallback(async () => {
-    const paginationStates = [
-      { name: 'productLists', state: productListsPagination },
-      { name: 'savedProducts', state: savedProductsPagination },
-      { name: 'orders', state: ordersPagination },
-      { name: 'recentProducts', state: recentProductsPagination },
-      { name: 'recommendedProducts', state: recommendedProductsPagination },
-      { name: 'followedShops', state: followedShopsPagination }
-    ]
+      const paginationStates = [
+        { name: 'productLists', state: productListsPagination },
+        { name: 'savedProducts', state: savedProductsPagination },
+        { name: 'orders', state: ordersPagination },
+        { name: 'recentProducts', state: recentProductsPagination },
+        { name: 'recommendedProducts', state: recommendedProductsPagination },
+        { name: 'followedShops', state: followedShopsPagination }
+      ]
 
     // Wait for full pagination to complete before syncing
-    const isStillLoading = paginationStates.some(
-      ({ state }) => state.isLoading || state.isPaginating
-    )
+      const isStillLoading = paginationStates.some(
+        ({ state }) => state.isLoading || state.isPaginating
+      )
 
-    if (isStillLoading) {
-      console.log('⏳ Still loading/paginating, waiting...')
-      return
-    }
+      if (isStillLoading) {
+        console.log('⏳ Still loading/paginating, waiting...')
+        return
+      }
 
-    const allPaginationComplete = paginationStates.every(({ state }) => state.isComplete)
-    if (!allPaginationComplete) {
-      console.log('⏳ Waiting for pagination to complete...')
-      return
-    }
+      const allPaginationComplete = paginationStates.every(({ state }) => state.isComplete)
+      if (!allPaginationComplete) {
+        console.log('⏳ Waiting for pagination to complete...')
+        return
+      }
 
-    // Check for hook errors (but don't block on recommendedProducts error if scope is missing)
-    const criticalErrors = listsError || savedError || ordersError || recentError || shopsError
-    if (criticalErrors) {
-      console.error('Hook errors detected:', {
-        listsError,
-        savedError,
-        ordersError,
-        recentError,
-        shopsError,
-        recommendedError
-      })
-      // Only set error for critical failures, recommendedProducts is optional
-      setError('Some data sources failed to load')
-      return
-    }
+      // Check for hook errors (but don't block on recommendedProducts error if scope is missing)
+      const criticalErrors = listsError || savedError || ordersError || recentError || shopsError
+      if (criticalErrors) {
+        console.error('Hook errors detected:', {
+          listsError,
+          savedError,
+          ordersError,
+          recentError,
+          shopsError,
+          recommendedError
+        })
+        // Only set error for critical failures, recommendedProducts is optional
+        setError('Some data sources failed to load')
+        return
+      }
 
     // Wait a bit to ensure hooks have settled
-    await new Promise(resolve => setTimeout(resolve, 1000))
+      await new Promise(resolve => setTimeout(resolve, 1000))
 
-    try {
-      setIsSyncing(true)
-      setError(null)
+      try {
+        setIsSyncing(true)
+        setError(null)
 
 
-      // Aggregate products from all sources (no source tracking - just collect all products)
-      const aggregatedProducts: Array<{
-        product: any
-        source?: string
-        attributes?: any
-      }> = []
-      const seenProductIds = new Set<string>()
+        // Aggregate products from all sources (no source tracking - just collect all products)
+        const aggregatedProducts: Array<{
+          product: any
+          source?: string
+          attributes?: any
+        }> = []
+        const seenProductIds = new Set<string>()
 
-      // 1. Products from saved products (handle null case)
-      if (savedProducts && Array.isArray(savedProducts) && savedProducts.length > 0) {
-        const validSaved = savedProducts.filter(isValidProduct)
-        validSaved.forEach(product => {
-          if (!seenProductIds.has(product.id)) {
-            seenProductIds.add(product.id)
-            aggregatedProducts.push({
-              product,
-              source: 'shopify',
-              attributes: { origin: { hook: 'useSavedProducts' } }
-            })
-          }
-        })
-      }
+        // 1. Products from saved products (handle null case)
+        if (savedProducts && Array.isArray(savedProducts) && savedProducts.length > 0) {
+          const validSaved = savedProducts.filter(isValidProduct)
+          validSaved.forEach(product => {
+            if (!seenProductIds.has(product.id)) {
+              seenProductIds.add(product.id)
+              aggregatedProducts.push({
+                product,
+                source: 'shopify',
+                attributes: { origin: { hook: 'useSavedProducts' } }
+              })
+            }
+          })
+        }
 
-      // 2. Products from product lists (handle null case)
-      if (productLists && Array.isArray(productLists) && productLists.length > 0) {
-        productLists.forEach(list => {
-          if (list.products && list.products.length > 0) {
-            const validListProducts = list.products.filter(isValidProduct)
-            validListProducts.forEach(product => {
-              if (!seenProductIds.has(product.id)) {
-                seenProductIds.add(product.id)
-                aggregatedProducts.push({
-                  product,
-                  source: 'shopify',
-                  attributes: { origin: { hook: 'useProductLists', listName: list.name } }
-                })
-              }
-            })
-          }
-        })
-      }
-
-      // 3. Products from orders (handle null case)
-      if (orders && Array.isArray(orders) && orders.length > 0) {
-        orders.forEach(order => {
-          if (order.lineItems && order.lineItems.length > 0) {
-            order.lineItems.forEach(item => {
-              if (item.product && isValidProduct(item.product)) {
-                const product = item.product
+        // 2. Products from product lists (handle null case)
+        if (productLists && Array.isArray(productLists) && productLists.length > 0) {
+          productLists.forEach(list => {
+            if (list.products && list.products.length > 0) {
+              const validListProducts = list.products.filter(isValidProduct)
+              validListProducts.forEach(product => {
                 if (!seenProductIds.has(product.id)) {
                   seenProductIds.add(product.id)
                   aggregatedProducts.push({
                     product,
                     source: 'shopify',
-                    attributes: { origin: { hook: 'useOrders', orderId: (order as any)?.id ?? null } }
+                    attributes: { origin: { hook: 'useProductLists', listName: list.name } }
                   })
                 }
-              }
-            })
-          }
-        })
-      }
+              })
+            }
+          })
+        }
 
-      // 4. Recent products (handle null case)
-      if (recentProducts && Array.isArray(recentProducts) && recentProducts.length > 0) {
-        const validRecent = recentProducts.filter(isValidProduct)
-        validRecent.forEach(product => {
-          if (!seenProductIds.has(product.id)) {
-            seenProductIds.add(product.id)
-            aggregatedProducts.push({
-              product,
-              source: 'shopify',
-              attributes: { origin: { hook: 'useRecentProducts' } }
-            })
-          }
-        })
-      }
+        // 3. Products from orders (handle null case)
+        if (orders && Array.isArray(orders) && orders.length > 0) {
+          orders.forEach(order => {
+            if (order.lineItems && order.lineItems.length > 0) {
+              order.lineItems.forEach(item => {
+                if (item.product && isValidProduct(item.product)) {
+                  const product = item.product
+                  if (!seenProductIds.has(product.id)) {
+                    seenProductIds.add(product.id)
+                    aggregatedProducts.push({
+                      product,
+                      source: 'shopify',
+                      attributes: { origin: { hook: 'useOrders', orderId: (order as any)?.id ?? null } }
+                    })
+                  }
+                }
+              })
+            }
+          })
+        }
 
-      // 5. Recommended products (handle null case)
-      if (recommendedProducts && Array.isArray(recommendedProducts) && recommendedProducts.length > 0) {
-        const validRecommended = recommendedProducts.filter(isValidProduct)
-        validRecommended.forEach(product => {
-          if (!seenProductIds.has(product.id)) {
-            seenProductIds.add(product.id)
-            aggregatedProducts.push({
-              product,
-              source: 'shopify',
-              attributes: { origin: { hook: 'useRecommendedProducts' } }
-            })
-          }
-        })
+        // 4. Recent products (handle null case)
+        if (recentProducts && Array.isArray(recentProducts) && recentProducts.length > 0) {
+          const validRecent = recentProducts.filter(isValidProduct)
+          validRecent.forEach(product => {
+            if (!seenProductIds.has(product.id)) {
+              seenProductIds.add(product.id)
+              aggregatedProducts.push({
+                product,
+                source: 'shopify',
+                attributes: { origin: { hook: 'useRecentProducts' } }
+              })
+            }
+          })
+        }
+
+        // 5. Recommended products (handle null case)
+        if (recommendedProducts && Array.isArray(recommendedProducts) && recommendedProducts.length > 0) {
+          const validRecommended = recommendedProducts.filter(isValidProduct)
+          validRecommended.forEach(product => {
+            if (!seenProductIds.has(product.id)) {
+              seenProductIds.add(product.id)
+              aggregatedProducts.push({
+                product,
+                source: 'shopify',
+                attributes: { origin: { hook: 'useRecommendedProducts' } }
+              })
+            }
+          })
       }
 
       // Continue to sync even if no products - we still want to sync shops
       // This ensures we always update the feed, even if only shops changed
 
-      // Get token for API call
-      const token = await getValidToken()
+        // Get token for API call
+        const token = await getValidToken()
 
-      // Send to backend
-      const response = await fetch(
-        'https://fhyisvyhahqxryanjnby.supabase.co/functions/v1/sync-product-feed',
-        {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            products: aggregatedProducts,
-            followedShops: followedShops || []
-          })
-        }
-      )
+        // Send to backend
+        const response = await fetch(
+          'https://fhyisvyhahqxryanjnby.supabase.co/functions/v1/sync-product-feed',
+          {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              products: aggregatedProducts,
+              followedShops: followedShops || []
+            })
+          }
+        )
 
-      if (!response.ok) {
-        const errorText = await response.text()
-        console.error('❌ Sync failed, response:', errorText)
-        let errorData
-        try {
-          errorData = JSON.parse(errorText)
-        } catch {
-          errorData = { error: errorText || `Failed to sync feed: ${response.status}` }
+        if (!response.ok) {
+          const errorText = await response.text()
+          console.error('❌ Sync failed, response:', errorText)
+          let errorData
+          try {
+            errorData = JSON.parse(errorText)
+          } catch {
+            errorData = { error: errorText || `Failed to sync feed: ${response.status}` }
+          }
+          throw new Error(errorData.error || `Failed to sync feed: ${response.status}`)
         }
-        throw new Error(errorData.error || `Failed to sync feed: ${response.status}`)
-      }
 
       await response.json()
       const syncTimestamp = Date.now()
       console.log(`✅ Feed synced successfully at ${new Date(syncTimestamp).toISOString()}: ${aggregatedProducts.length} products, ${followedShops?.length || 0} shops`)
-      
+        
       // Always mark as synced and update timestamp, even if no products
       // This ensures we track that a sync attempt was made
-      hasSyncedRef.current = true
+        hasSyncedRef.current = true
       lastSyncTimeRef.current = syncTimestamp
       setSyncCount(prev => prev + 1)
 
-    } catch (err) {
-      console.error('❌ Error syncing product feed:', err)
-      setError(err instanceof Error ? err.message : 'Failed to sync product feed')
-    } finally {
-      setIsSyncing(false)
+      } catch (err) {
+        console.error('❌ Error syncing product feed:', err)
+        setError(err instanceof Error ? err.message : 'Failed to sync product feed')
+      } finally {
+        setIsSyncing(false)
     }
   }, [
     productLists,
