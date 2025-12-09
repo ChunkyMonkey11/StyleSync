@@ -174,41 +174,39 @@ export function FriendsPage({ onBack }: FriendsPageProps) {
                             </div>
                         </Card>
                     ) : sentRequests.length > 0 ? (
-                        <Card className="p-4 bg-white/95 backdrop-blur-sm border border-white/30 shadow-lg">
-                            <h3 className="font-semibold text-base mb-3 text-gray-800">Sent Requests</h3>
-                            <div className="space-y-2">
+                        <Card className="p-5 bg-white/95 backdrop-blur-sm border border-white/30 shadow-lg">
+                            <h3 className="font-semibold text-lg mb-4 text-gray-800">Sent Requests</h3>
+                            <div className="space-y-3">
                                 {sentRequests.map((request) => (
                                     <div 
                                         key={request.id} 
-                                        className="flex items-center gap-2.5 p-2.5 bg-white/60 backdrop-blur-sm rounded-lg border border-gray-200/50 hover:bg-white/80 transition-all duration-200"
+                                        className="flex items-center gap-3 p-3 bg-white/60 backdrop-blur-sm rounded-xl border border-gray-200/50 hover:bg-white/80 transition-all duration-200"
                                     >
-                                        {/* Avatar - Circular */}
+                                        {/* Avatar */}
                                         {request.receiver_profile?.profile_pic ? (
-                                            <div className="w-10 h-10 rounded-full overflow-hidden flex-shrink-0 border border-gray-200/50 shadow-sm">
-                                                <Image
-                                                    src={request.receiver_profile.profile_pic}
-                                                    alt={request.receiver_profile.username || 'User'}
-                                                    className="w-full h-full object-cover"
-                                                />
-                                            </div>
+                                            <Image
+                                                src={request.receiver_profile.profile_pic}
+                                                alt={request.receiver_profile.username || 'User'}
+                                                className="w-12 h-12 rounded-full object-cover border-2 border-white shadow-sm"
+                                            />
                                         ) : (
-                                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-400 to-purple-600 flex items-center justify-center border border-gray-200/50 shadow-sm flex-shrink-0">
-                                                <span className="text-white text-sm font-semibold">
+                                            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-400 to-purple-600 flex items-center justify-center border-2 border-white shadow-sm">
+                                                <span className="text-white text-lg font-semibold">
                                                     {(request.receiver_profile?.username || 'U')[0]?.toUpperCase()}
                                                 </span>
                                             </div>
                                         )}
                                         
                                         <div className="flex-1 min-w-0">
-                                            <p className="font-medium text-sm text-gray-800 truncate leading-tight">
-                                                {request.receiver_profile?.display_name || request.receiver_profile?.username || 'Unknown'}
-                                            </p>
-                                            <p className="text-xs text-gray-500 truncate leading-tight">
+                                            <p className="font-semibold text-gray-800 truncate">
                                                 @{request.receiver_profile?.username || 'Unknown'}
+                                            </p>
+                                            <p className="text-sm text-gray-500 truncate">
+                                                {request.receiver_profile?.display_name || 'User'}
                                             </p>
                                         </div>
                                         
-                                        <span className={`text-xs font-medium px-2 py-0.5 rounded-full flex-shrink-0 ${
+                                        <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${
                                             request.status === 'pending' 
                                                 ? 'bg-yellow-100 text-yellow-700' 
                                                 : request.status === 'accepted'
@@ -259,50 +257,48 @@ export function FriendsPage({ onBack }: FriendsPageProps) {
                             <p className="text-sm text-gray-600">When someone sends you a request, it will appear here!</p>
                         </Card>
                     ) : (
-                        <Card className="p-4 bg-white/95 backdrop-blur-sm border border-white/30 shadow-lg">
-                            <h3 className="font-semibold text-base mb-3 text-gray-800">Friend Requests</h3>
-                            <div className="space-y-2">
+                        <Card className="p-5 bg-white/95 backdrop-blur-sm border border-white/30 shadow-lg">
+                            <h3 className="font-semibold text-lg mb-4 text-gray-800">Friend Requests</h3>
+                            <div className="space-y-3">
                                 {receivedRequests.map((request) => (
                                     <div 
                                         key={request.id} 
-                                        className="flex items-center gap-2.5 p-2.5 bg-white/60 backdrop-blur-sm rounded-lg border border-gray-200/50 hover:bg-white/80 transition-all duration-200"
+                                        className="flex items-center gap-3 p-4 bg-white/60 backdrop-blur-sm rounded-xl border border-gray-200/50 hover:bg-white/80 transition-all duration-200"
                                     >
-                                        {/* Avatar - Circular */}
+                                        {/* Avatar */}
                                         {request.sender_profile?.profile_pic ? (
-                                            <div className="w-10 h-10 rounded-full overflow-hidden flex-shrink-0 border border-gray-200/50 shadow-sm">
-                                                <Image
-                                                    src={request.sender_profile.profile_pic}
-                                                    alt={request.sender_profile.username || 'User'}
-                                                    className="w-full h-full object-cover"
-                                                />
-                                            </div>
+                                            <Image
+                                                src={request.sender_profile.profile_pic}
+                                                alt={request.sender_profile.username || 'User'}
+                                                className="w-14 h-14 rounded-full object-cover border-2 border-white shadow-sm flex-shrink-0"
+                                            />
                                         ) : (
-                                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-400 to-purple-600 flex items-center justify-center border border-gray-200/50 shadow-sm flex-shrink-0">
-                                                <span className="text-white text-sm font-semibold">
+                                            <div className="w-14 h-14 rounded-full bg-gradient-to-br from-purple-400 to-purple-600 flex items-center justify-center border-2 border-white shadow-sm flex-shrink-0">
+                                                <span className="text-white text-xl font-semibold">
                                                     {(request.sender_profile?.username || 'U')[0]?.toUpperCase()}
                                                 </span>
                                             </div>
                                         )}
                                         
                                         <div className="flex-1 min-w-0">
-                                            <p className="font-medium text-sm text-gray-800 truncate leading-tight">
-                                                {request.sender_profile?.display_name || request.sender_profile?.username || 'Unknown'}
-                                            </p>
-                                            <p className="text-xs text-gray-500 truncate leading-tight">
+                                            <p className="font-semibold text-gray-800 truncate">
                                                 @{request.sender_profile?.username || 'Unknown'}
+                                            </p>
+                                            <p className="text-sm text-gray-500 truncate">
+                                                {request.sender_profile?.display_name || 'User'} wants to be friends
                                             </p>
                                         </div>
                                         
-                                        <div className="flex gap-1.5 flex-shrink-0">
+                                        <div className="flex gap-2 flex-shrink-0">
                                             <Button
                                                 onClick={() => handleAcceptRequest(request.id)}
-                                                className="px-3 py-1.5 bg-green-600 text-white text-xs font-medium rounded-md hover:bg-green-700 active:scale-95 transition-all duration-200 shadow-sm"
+                                                className="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 active:scale-95 transition-all duration-200 shadow-sm"
                                             >
                                                 Accept
                                             </Button>
                                             <Button
                                                 onClick={() => handleDeclineRequest(request.id)}
-                                                className="px-3 py-1.5 bg-gray-200 text-gray-700 text-xs font-medium rounded-md hover:bg-gray-300 active:scale-95 transition-all duration-200"
+                                                className="px-4 py-2 bg-gray-200 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-300 active:scale-95 transition-all duration-200"
                                             >
                                                 Decline
                                             </Button>
@@ -319,16 +315,16 @@ export function FriendsPage({ onBack }: FriendsPageProps) {
             {activeTab === 'friends' && (
                 <div className="space-y-4">
                     {isLoading ? (
-                        <Card className="p-4 bg-white/95 backdrop-blur-sm border border-white/30 shadow-lg">
-                            <div className="grid grid-cols-2 gap-3">
-                                {[1, 2, 3, 4].map((i) => (
-                                    <div key={i} className="flex flex-col items-center p-3">
-                                        <div className="w-16 h-16 bg-gray-200 rounded-full mb-2"></div>
-                                        <div className="w-full mb-2">
-                                            <div className="h-3.5 bg-gray-200 rounded mb-1.5 w-full"></div>
-                                            <div className="h-2.5 bg-gray-200 rounded w-3/4 mx-auto"></div>
+                        <Card className="p-5 bg-white/95 backdrop-blur-sm border border-white/30 shadow-lg">
+                            <div className="animate-pulse space-y-3">
+                                {[1, 2].map((i) => (
+                                    <div key={i} className="flex items-center gap-3">
+                                        <div className="w-12 h-12 bg-gray-200 rounded-full"></div>
+                                        <div className="flex-1">
+                                            <div className="h-4 bg-gray-200 rounded mb-2 w-24"></div>
+                                            <div className="h-3 bg-gray-200 rounded w-32"></div>
                                         </div>
-                                        <div className="w-full h-7 bg-gray-200 rounded-md"></div>
+                                        <div className="w-20 h-8 bg-gray-200 rounded"></div>
                                     </div>
                                 ))}
                             </div>
@@ -346,47 +342,43 @@ export function FriendsPage({ onBack }: FriendsPageProps) {
                             </Button>
                         </Card>
                     ) : (
-                        <Card className="p-4 bg-white/95 backdrop-blur-sm border border-white/30 shadow-lg">
-                            <h3 className="font-semibold text-base mb-3 text-gray-800">
+                        <Card className="p-5 bg-white/95 backdrop-blur-sm border border-white/30 shadow-lg">
+                            <h3 className="font-semibold text-lg mb-4 text-gray-800">
                                 Your Friends <span className="text-purple-600">({friends.length})</span>
                             </h3>
-                            <div className="grid grid-cols-2 gap-3">
+                            <div className="space-y-3">
                                 {friends.map((friend) => (
                                     <div 
                                         key={friend.id} 
-                                        className="flex flex-col items-center p-3 bg-white/60 backdrop-blur-sm rounded-lg border border-gray-200/50 hover:bg-white/80 transition-all duration-200"
+                                        className="flex items-center gap-3 p-4 bg-white/60 backdrop-blur-sm rounded-xl border border-gray-200/50 hover:bg-white/80 transition-all duration-200 group"
                                     >
-                                        {/* Avatar - Circular on top */}
+                                        {/* Avatar */}
                                         {friend.friend_profile.profile_pic ? (
-                                            <div className="w-16 h-16 rounded-full overflow-hidden mb-2 border border-gray-200/50 shadow-sm">
-                                                <Image
-                                                    src={friend.friend_profile.profile_pic}
-                                                    alt={friend.friend_profile.username}
-                                                    className="w-full h-full object-cover"
-                                                />
-                                            </div>
+                                            <Image
+                                                src={friend.friend_profile.profile_pic}
+                                                alt={friend.friend_profile.username}
+                                                className="w-14 h-14 rounded-full object-cover border-2 border-white shadow-sm flex-shrink-0"
+                                            />
                                         ) : (
-                                            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-purple-400 to-purple-600 flex items-center justify-center mb-2 border border-gray-200/50 shadow-sm">
-                                                <span className="text-white text-lg font-semibold">
+                                            <div className="w-14 h-14 rounded-full bg-gradient-to-br from-purple-400 to-purple-600 flex items-center justify-center border-2 border-white shadow-sm flex-shrink-0">
+                                                <span className="text-white text-xl font-semibold">
                                                     {friend.friend_profile.username[0]?.toUpperCase()}
                                                 </span>
                                             </div>
                                         )}
                                         
-                                        {/* Name and Username - Below avatar */}
-                                        <div className="text-center mb-2 w-full">
-                                            <p className="font-medium text-sm text-gray-800 truncate leading-tight">
-                                                {friend.friend_profile.display_name || friend.friend_profile.username}
-                                            </p>
-                                            <p className="text-xs text-gray-500 truncate leading-tight">
+                                        <div className="flex-1 min-w-0">
+                                            <p className="font-semibold text-gray-800 truncate">
                                                 @{friend.friend_profile.username}
+                                            </p>
+                                            <p className="text-sm text-gray-500 truncate">
+                                                {friend.friend_profile.display_name}
                                             </p>
                                         </div>
                                         
-                                        {/* Remove Button - Below name */}
                                         <Button
                                             onClick={() => handleRemoveFriend(friend.friend_id)}
-                                            className="w-full px-3 py-1.5 bg-red-500 text-white text-xs font-medium rounded-md hover:bg-red-600 active:scale-95 transition-all duration-200 shadow-sm"
+                                            className="px-4 py-2 bg-red-500 text-white text-sm font-medium rounded-lg hover:bg-red-600 active:scale-95 transition-all duration-200 shadow-sm opacity-0 group-hover:opacity-100"
                                         >
                                             Remove
                                         </Button>
