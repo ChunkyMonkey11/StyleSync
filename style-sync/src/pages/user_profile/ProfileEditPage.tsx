@@ -46,7 +46,9 @@ export function ProfileEditPage({ onBack, onSave }: ProfileEditPageProps) {
     const interestOptions = [
         'Fashion', 'Streetwear', 'Vintage', 'Luxury', 'Sustainable', 
         'Athletic', 'Formal', 'Accessories', 'Shoes', 'Jewelry',
-        'Beauty', 'Lifestyle', 'Travel', 'Art', 'Music'
+        'Beauty', 'Lifestyle', 'Travel', 'Art', 'Music',
+        'Urban', 'Sneakers', 'Comfort', 'Everyday', 'Designer', 
+        'Premium', 'Retro', 'Thrift'
     ]
 
     // Load existing profile data

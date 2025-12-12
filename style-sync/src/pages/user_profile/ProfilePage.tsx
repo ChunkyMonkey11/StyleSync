@@ -1,7 +1,11 @@
 import { useState, useEffect } from 'react'
-import { Card, Button, Image } from '@shopify/shop-minis-react'
+import { Button } from '@shopify/shop-minis-react'
 import { useAuth } from '../../hooks/useAuth'
 import { useFriendRequests } from '../../hooks/useFriendRequests'
+import { apiRequestJson } from '../../utils/apiClient'
+import { getCardProfile, type CardProfileResponse } from '../../utils/api/card'
+import { PokerCardPreview } from '../../components/PokerCardPreview'
+import { SUIT_ICONS } from '../../types/card'
 
 interface UserProfile {
     id: string
@@ -19,53 +23,56 @@ interface UserProfile {
 interface ProfilePageProps {
     onBack: () => void
     onEdit: () => void
+    onDeckGuide?: () => void
 }
 
-export function ProfilePage({ onBack, onEdit }: ProfilePageProps) {
-    const { getValidToken } = useAuth()
-    const { friends } = useFriendRequests()
+export function ProfilePage({ onBack, onEdit, onDeckGuide }: ProfilePageProps) {
+    const {} = useAuth() // API client handles auth automatically
+    const { refreshData } = useFriendRequests()
     const [profile, setProfile] = useState<UserProfile | null>(null)
+    const [cardProfile, setCardProfile] = useState<CardProfileResponse | null>(null)
     const [isLoading, setIsLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
     
-    // Get friends count
-    const friendsCount = friends.length
-
-    // Fetch user profile on mount
+    // Fetch user profile and card profile data on mount
     useEffect(() => {
         fetchUserProfile()
-    }, [])
+        fetchCardProfile()
+        refreshData() // Load friends data
+    }, [refreshData])
 
     const fetchUserProfile = async () => {
+        try {
+            const result = await apiRequestJson<{ hasProfile?: boolean; profile?: any }>('check-profile', {
+                method: 'GET'
+            })
+
+            if (result.hasProfile && result.profile) {
+                setProfile(result.profile)
+            }
+        } catch (error) {
+            console.error('Error fetching profile:', error)
+        }
+    }
+
+    const fetchCardProfile = async () => {
         try {
             setIsLoading(true)
             setError(null)
             
-            const token = await getValidToken()
-            const response = await fetch(
-                'https://fhyisvyhahqxryanjnby.supabase.co/functions/v1/check-profile',
-                {
-                    method: 'GET',
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'application/json'
-                    }
-                }
-            )
-
-            if (!response.ok) {
-                throw new Error(`Failed to fetch profile: ${response.status}`)
-            }
-
-            const result = await response.json()
+            const cardData = await getCardProfile()
+            setCardProfile(cardData)
+            
+            // Also fetch regular profile for interests
+            const result = await apiRequestJson<{ hasProfile?: boolean; profile?: any }>('check-profile', {
+                method: 'GET'
+            })
             if (result.hasProfile && result.profile) {
                 setProfile(result.profile)
-            } else {
-                setError('No profile found')
             }
         } catch (error) {
-            console.error('Error fetching profile:', error)
-            setError(error instanceof Error ? error.message : 'Failed to load profile')
+            console.error('Error fetching card profile:', error)
+            setError(error instanceof Error ? error.message : 'Failed to load card profile')
         } finally {
             setIsLoading(false)
         }
@@ -123,7 +130,7 @@ export function ProfilePage({ onBack, onEdit }: ProfilePageProps) {
     }
 
     return (
-        <div className="min-h-screen  p-4 max-w-md mx-auto">
+        <div className="min-h-screen p-4 max-w-md mx-auto">
             {/* Header */}
             <div className="flex items-center mb-6 pt-4">
                 <button 
@@ -136,90 +143,41 @@ export function ProfilePage({ onBack, onEdit }: ProfilePageProps) {
             </div>
 
             <div className="space-y-6">
-                {/* Profile Header Card */}
-                <Card className="p-6 text-center">
-                    {/* Profile Picture */}
-                    <div className="mb-4">
-                        {profile?.profile_pic ? (
-                            <Image 
-                                src={profile.profile_pic} 
-                                alt="Profile" 
-                                className="w-24 h-24 rounded-full mx-auto"
-                            />
-                        ) : (
-                            <div className="w-24 h-24 rounded-full bg-gray-200 mx-auto flex items-center justify-center">
-                                <span className="text-2xl text-gray-400">👤</span>
-                            </div>
-                        )}
-                    </div>
-
-                    {/* Username and Display Name */}
-                    <h2 className="text-xl font-bold mb-1">@{profile?.username}</h2>
-                    <p className="text-gray-600 mb-2">{profile?.display_name}</p>
-                    
-                    {/* Bio */}
-                    {profile?.bio && (
-                        <p className="text-sm text-gray-700 mb-4">{profile.bio}</p>
-                    )}
-
-                    {/* Member Since */}
-                    <p className="text-xs text-gray-500">
-                        Member since {profile ? new Date(profile.created_at).toLocaleDateString() : 'Unknown'}
-                    </p>
-                </Card>
-
-                {/* Style Preferences Card */}
-                <Card className="p-5">
-                    <h3 className="font-semibold mb-4">Style Preferences</h3>
-                    {profile?.style_preferences && profile.style_preferences.length > 0 ? (
-                        <div className="overflow-x-auto scrollbar-hide -mx-5 px-5">
-                            <div className="flex gap-3 whitespace-nowrap">
-                                {profile.style_preferences.map((preference, index) => (
-                                    <span 
-                                        key={index}
-                                        className="px-3 py-1.5 bg-blue-100 text-blue-800 text-xs rounded-full flex-shrink-0"
-                                    >
-                                        {preference}
+                {/* Poker Card Preview */}
+                {cardProfile && profile && (
+                    <div className="flex flex-col items-center">
+                        <PokerCardPreview
+                            username={cardProfile.username}
+                            displayName={cardProfile.display_name}
+                            avatarUrl={cardProfile.avatar_url}
+                            bio={cardProfile.bio}
+                            rank={cardProfile.rank}
+                            suit={cardProfile.suit}
+                            stats={{
+                                friends_count: cardProfile.friends_count,
+                                interests: profile.interests || []
+                            }}
+                        />
+                        
+                        {/* Current Tier Chip */}
+                        <div className="mt-6 inline-flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur-sm rounded-full border border-white/20">
+                            <span className="text-white font-semibold">
+                                Current Tier: {cardProfile.rank}{SUIT_ICONS[cardProfile.suit]}
                                     </span>
-                                ))}
-                            </div>
                         </div>
-                    ) : (
-                        <p className="text-sm text-gray-500">No style preferences set. Add some in Edit Profile!</p>
-                    )}
-                </Card>
-
-                {/* Interests Card */}
-                <Card className="p-5">
-                    <h3 className="font-semibold mb-4">Interests</h3>
-                    {profile?.interests && profile.interests.length > 0 ? (
-                        <div className="overflow-x-auto scrollbar-hide -mx-5 px-5">
-                            <div className="flex gap-3 whitespace-nowrap">
-                                {profile.interests.map((interest, index) => (
-                                    <span 
-                                        key={index}
-                                        className="px-3 py-1.5 bg-purple-100 text-purple-800 text-xs rounded-full flex-shrink-0"
-                                    >
-                                        {interest}
-                                    </span>
-                                ))}
-                            </div>
-                        </div>
-                    ) : (
-                        <p className="text-sm text-gray-500">No interests set. Add some in Edit Profile!</p>
-                    )}
-                </Card>
-
-                {/* Profile Stats Card */}
-                <Card className="p-5">
-                    <h3 className="font-semibold mb-4">Profile Stats</h3>
-                    <div className="text-center">
-                        <p className="text-3xl font-bold text-purple-600">{friendsCount}</p>
-                        <p className="text-sm text-gray-600 mt-1">
-                            {friendsCount === 1 ? 'Friend' : 'Friends'}
-                        </p>
                     </div>
-                </Card>
+                )}
+
+                {/* Deck Guide Button */}
+                {onDeckGuide && (
+                    <Button 
+                        onClick={onDeckGuide}
+                        className="w-full"
+                        variant="secondary"
+                    >
+                        View Deck Guide
+                    </Button>
+                )}
 
                 {/* Edit Profile Button */}
                 <Button 

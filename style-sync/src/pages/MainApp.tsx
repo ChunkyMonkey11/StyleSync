@@ -98,6 +98,7 @@ import { FriendsPage } from './social/FriendsPage'
 import { ProfilePage } from './user_profile/ProfilePage'
 import { ProfileEditPage } from './user_profile/ProfileEditPage'
 import { FeedPage } from './feeds/FeedPage'
+import { DeckGuidePage } from './deck/DeckGuidePage'
 import { useAuth } from '../hooks/useAuth'
 import { useFriendRequests } from '../hooks/useFriendRequests'
 import pencilIcon from '../pencil.png'
@@ -153,7 +154,7 @@ export function MainApp() {
      * Current view/page being displayed.
      * Controls which component is rendered based on user navigation.
      */
-    const [currentView, setCurrentView] = useState<'main' | 'friends' | 'profile' | 'profile-edit' | 'feeds'>('main')
+    const [currentView, setCurrentView] = useState<'main' | 'friends' | 'profile' | 'profile-edit' | 'feeds' | 'deck-guide'>('main')
     
     /**
      * User profile data fetched from backend.
@@ -301,6 +302,7 @@ export function MainApp() {
             <ProfilePage 
                 onBack={() => setCurrentView('main')} 
                 onEdit={() => setCurrentView('profile-edit')}
+                onDeckGuide={() => setCurrentView('deck-guide')}
             />
         )
     }
@@ -328,6 +330,14 @@ export function MainApp() {
      */
     if (currentView === 'feeds') {
         return <FeedPage onBack={() => setCurrentView('main')} />
+    }
+
+    /**
+     * Deck Guide View
+     * Displays card ranking system and user's current card.
+     */
+    if (currentView === 'deck-guide') {
+        return <DeckGuidePage onBack={() => setCurrentView('profile')} />
     }
 
 
