@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { OnboardingPage } from './pages/auth/OnboardingPage'
 import { MainApp } from './pages/MainApp'
 import { LoadingScreen } from './components/LoadingScreen'
@@ -10,15 +10,15 @@ export function App() {
   const [hasProfile, setHasProfile] = useState(false)
   const [showLoading, setShowLoading] = useState(true)
   const [animationStartTime] = useState(Date.now())
+  const onboardingCompletedRef = useRef(false)
 
   // Update hasProfile when initialization completes
+  // Only update from initializationData if onboarding hasn't been completed
   useEffect(() => {
-    if (initializationData && !isInitializing) {
-      if (hasProfile !== initializationData.hasProfile) {
-        setHasProfile(initializationData.hasProfile)
-      }
+    if (initializationData && !isInitializing && !onboardingCompletedRef.current) {
+      setHasProfile(initializationData.hasProfile)
     }
-  }, [initializationData, isInitializing, hasProfile])
+  }, [initializationData, isInitializing])
 
   // Handle smooth transition from loading screen to app
   // Ensure animation completes (2.8s) even if initialization finishes early
@@ -37,6 +37,7 @@ export function App() {
   }, [isInitializing, error, animationStartTime])
 
   const handleProfileComplete = () => {
+    onboardingCompletedRef.current = true
     setHasProfile(true)
   }
 

@@ -312,73 +312,119 @@ export function FeedPage({ onBack }: FeedPageProps) {
   // Default view: Friends list
   return (
     <div className="p-4 max-w-md mx-auto">
+      <style>{`
+        @keyframes slideUpFade {
+          from {
+            opacity: 0;
+            transform: translateY(20px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        
+        .feed-card {
+          animation: slideUpFade 0.5s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+        }
+        
+        .feed-card:nth-child(1) { animation-delay: 0.05s; }
+        .feed-card:nth-child(2) { animation-delay: 0.1s; }
+        .feed-card:nth-child(3) { animation-delay: 0.15s; }
+        .feed-card:nth-child(4) { animation-delay: 0.2s; }
+        .feed-card:nth-child(5) { animation-delay: 0.25s; }
+        .feed-card:nth-child(6) { animation-delay: 0.3s; }
+      `}</style>
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center">
-          <button 
-            onClick={onBack}
-            className="mr-3 p-2 hover:bg-gray-100 rounded-lg transition-colors"
+      <div className="relative flex items-center justify-center mb-8 pt-6">
+        <button 
+          onClick={onBack}
+          className="absolute left-0 top-0 px-3 py-2 text-white/70 hover:text-white hover:bg-white/10 rounded-xl transition-all"
+          style={{ fontFamily: "'Inter', sans-serif" }}
+        >
+          ← Back
+        </button>
+        <div className="text-center">
+          <h1 
+            className="text-2xl font-bold text-white" 
+            style={{ 
+              fontFamily: "'Inter', sans-serif",
+              textShadow: '0 0 20px rgba(255, 255, 255, 0.3), 0 0 40px rgba(255, 255, 255, 0.15)'
+            }}
           >
-            ← Back
-          </button>
-          <h1 className="text-2xl font-bold">Feeds</h1>
+            Feeds
+          </h1>
+          <p 
+            className="text-sm text-white/60 mt-1" 
+            style={{ fontFamily: "'Inter', sans-serif" }}
+          >
+            Shop through your friends' eyes
+          </p>
         </div>
         {syncError && (
-          <span className="text-xs text-red-600">Sync failed</span>
+          <span className="absolute right-0 text-xs text-red-200 bg-red-500/20 px-3 py-1.5 rounded-xl backdrop-blur-sm border border-red-500/30 font-medium" style={{ fontFamily: "'Tessan Sans', sans-serif" }}>Sync failed</span>
         )}
       </div>
 
       {/* Sync Status */}
       {isSyncing && (
-        <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded text-blue-700 text-sm">
-          Syncing your feed...
+        <div className="mb-4 p-4 bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl text-blue-100 text-sm shadow-[0_0_20px_rgba(255,255,255,0.05)]">
+          <div className="flex items-center gap-3">
+            <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse"></div>
+            <span className="font-medium" style={{ fontFamily: "'Tessan Sans', sans-serif" }}>Syncing your feed...</span>
+          </div>
         </div>
       )}
 
       {/* Friends List */}
       {friendsLoading ? (
-        <div className="space-y-4">
+        <div className="space-y-3">
           {[1, 2, 3].map(i => (
-            <div key={i} className="bg-white p-4 rounded-lg border shadow-sm animate-pulse">
-              <div className="h-12 bg-gray-200 rounded-full w-12 mb-2"></div>
-              <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+            <div key={i} className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-3 shadow-[0_0_20px_rgba(255,255,255,0.05)] animate-pulse">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 bg-white/20 rounded-full flex-shrink-0"></div>
+                <div className="flex-1">
+                  <div className="h-4 bg-white/20 rounded mb-2 w-24"></div>
+                  <div className="h-3 bg-white/20 rounded w-20"></div>
+                </div>
+              </div>
             </div>
           ))}
         </div>
       ) : (
         <div>
-          {/* My Feed Card - Always show at top */}
+          {/* My Feed Chip - Always show at top */}
           {myProfile && (
-            <div className="mb-4">
-              <p className="text-sm text-gray-600 mb-3">Your Feed</p>
+            <div className="mb-6">
               <button
                 onClick={handleMyFeedClick}
-                className="w-full flex items-center p-4 bg-white rounded-lg border shadow-sm hover:bg-gray-50 transition-colors text-left"
+                className="w-full flex items-center gap-3 px-4 py-2.5 bg-white/5 backdrop-blur-xl border border-white/10 rounded-full shadow-[0_0_20px_rgba(255,255,255,0.05)] hover:bg-white/10 active:scale-95 active:bg-white/15 active:shadow-2xl transition-all duration-200"
               >
                 {myProfile.profile_pic ? (
-                  <Image 
-                    src={myProfile.profile_pic} 
-                    alt={myProfile.username}
-                    className="w-12 h-12 rounded-full mr-3 object-cover"
-                  />
+                  <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0">
+                    <Image 
+                      src={myProfile.profile_pic} 
+                      alt={myProfile.username}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
                 ) : currentUser?.avatarImage?.url ? (
-                  <Image 
-                    src={currentUser.avatarImage.url} 
-                    alt={myProfile.username}
-                    className="w-12 h-12 rounded-full mr-3 object-cover"
-                  />
+                  <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0">
+                    <Image 
+                      src={currentUser.avatarImage.url} 
+                      alt={myProfile.username}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
                 ) : (
-                  <div className="w-12 h-12 rounded-full mr-3 bg-gray-200 flex items-center justify-center">
-                    <span className="text-gray-400 text-lg">
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-400 via-purple-500 to-purple-600 flex items-center justify-center flex-shrink-0">
+                    <span className="text-white text-sm font-bold" style={{ fontFamily: "'Tessan Sans', sans-serif" }}>
                       {myProfile.username.charAt(0).toUpperCase()}
                     </span>
                   </div>
                 )}
-                <div className="flex-1">
-                  <p className="font-medium">@{myProfile.username}</p>
-                  <p className="text-sm text-gray-600">{myProfile.display_name}</p>
-                </div>
-                <span className="text-gray-400">→</span>
+                <p className="text-sm font-medium text-white flex-1 text-left truncate" style={{ fontFamily: "'Tessan Sans', sans-serif" }}>@{myProfile.username}</p>
+                <span className="text-white/60 text-lg">→</span>
               </button>
             </div>
           )}
@@ -386,41 +432,47 @@ export function FeedPage({ onBack }: FeedPageProps) {
           {/* Friends Section */}
           {friends.length > 0 ? (
             <>
-              <p className="text-sm text-gray-600 mb-3">Friends</p>
-              <div className="space-y-3">
-                {friends.map(friend => (
-                  <button
-                    key={friend.id}
-                    onClick={() => handleFriendClick(friend.shop_public_id)}
-                    className="w-full flex items-center p-4 bg-white rounded-lg border shadow-sm hover:bg-gray-50 transition-colors text-left"
-                  >
-                    {friend.friend_profile.profile_pic ? (
-                      <Image 
-                        src={friend.friend_profile.profile_pic} 
-                        alt={friend.friend_profile.username}
-                        className="w-12 h-12 rounded-full mr-3 object-cover"
-                      />
-                    ) : (
-                      <div className="w-12 h-12 rounded-full mr-3 bg-gray-200 flex items-center justify-center">
-                        <span className="text-gray-400 text-lg">
-                          {friend.friend_profile.username.charAt(0).toUpperCase()}
-                        </span>
+              <div className="border-t border-white/10 pt-6 mt-6 mb-4">
+                <div className="space-y-3">
+                  {friends.map((friend, index) => (
+                    <button
+                      key={friend.id}
+                      onClick={() => handleFriendClick(friend.shop_public_id)}
+                      className={`feed-card w-full flex items-center gap-3 p-3 bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl shadow-[0_0_20px_rgba(255,255,255,0.05)] hover:bg-white/10 active:scale-95 active:bg-white/15 active:shadow-2xl transition-all duration-200`}
+                      style={{
+                        animationDelay: `${0.1 + index * 0.05}s`
+                      }}
+                    >
+                      {friend.friend_profile.profile_pic ? (
+                        <div className="w-12 h-12 rounded-full overflow-hidden flex-shrink-0">
+                          <Image 
+                            src={friend.friend_profile.profile_pic} 
+                            alt={friend.friend_profile.username}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                      ) : (
+                        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-400 via-purple-500 to-purple-600 flex items-center justify-center flex-shrink-0">
+                          <span className="text-white text-lg font-bold" style={{ fontFamily: "'Tessan Sans', sans-serif" }}>
+                            {friend.friend_profile.username.charAt(0).toUpperCase()}
+                          </span>
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0 text-left">
+                        <p className="text-sm font-medium text-white truncate" style={{ fontFamily: "'Tessan Sans', sans-serif" }}>@{friend.friend_profile.username}</p>
+                        <p className="text-xs font-normal text-white/60 truncate" style={{ fontFamily: "'Tessan Sans', sans-serif" }}>{friend.friend_profile.display_name}</p>
                       </div>
-                    )}
-                    <div className="flex-1">
-                      <p className="font-medium">@{friend.friend_profile.username}</p>
-                      <p className="text-sm text-gray-600">{friend.friend_profile.display_name}</p>
-                    </div>
-                    <span className="text-gray-400">→</span>
-                  </button>
-                ))}
+                      <span className="text-white/60 text-lg flex-shrink-0">→</span>
+                    </button>
+                  ))}
+                </div>
               </div>
             </>
           ) : (
-            <div className="text-center py-8">
-              <div className="text-4xl mb-2">👥</div>
-              <p className="text-sm text-gray-600">No friends yet</p>
-              <p className="text-xs text-gray-500 mt-1">Add friends to see their style feeds!</p>
+            <div className="text-center py-12 bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl shadow-[0_0_20px_rgba(255,255,255,0.05)] p-8">
+              <div className="text-5xl mb-4">👥</div>
+              <p className="text-lg font-semibold text-white mb-2" style={{ fontFamily: "'Tessan Sans', sans-serif" }}>No friends yet</p>
+              <p className="text-sm text-white/70" style={{ fontFamily: "'Tessan Sans', sans-serif" }}>Add friends to see their style feeds!</p>
             </div>
           )}
         </div>
