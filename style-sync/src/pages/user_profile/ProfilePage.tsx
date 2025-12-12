@@ -24,7 +24,7 @@ interface ProfilePageProps {
 
 export function ProfilePage({ onBack, onEdit }: ProfilePageProps) {
     const {} = useAuth() // API client handles auth automatically
-    const { friends } = useFriendRequests()
+    const { friends, refreshData } = useFriendRequests()
     const [profile, setProfile] = useState<UserProfile | null>(null)
     const [isLoading, setIsLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
@@ -32,10 +32,11 @@ export function ProfilePage({ onBack, onEdit }: ProfilePageProps) {
     // Get friends count
     const friendsCount = friends.length
 
-    // Fetch user profile on mount
+    // Fetch user profile and friends data on mount
     useEffect(() => {
         fetchUserProfile()
-    }, [])
+        refreshData() // Load friends data
+    }, [refreshData])
 
     const fetchUserProfile = async () => {
         try {

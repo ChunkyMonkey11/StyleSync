@@ -261,14 +261,6 @@ export function FeedPage({ onBack }: FeedPageProps) {
                       onFavoriteToggled={handleFavoriteToggled}
                       variant="compact"
                     />
-                    {/* Origin badge */}
-                    <div className="mt-1">
-                      <span className="text-[10px] text-white/60">
-                        {(product.attributes as any)?.origin?.hook
-                          ? String((product.attributes as any).origin.hook).replace(/^use/, '')
-                          : 'Shopify'}
-                      </span>
-                    </div>
                   </div>
                 )
               })}
