@@ -8,6 +8,7 @@ import {
   useRecommendedProducts
 } from '@shopify/shop-minis-react'
 import { useAuth } from './useAuth'
+import { apiRequestJson } from '../utils/apiClient'
 
 const INITIAL_PAGE_SIZE = 20
 const PAGINATION_PAGE_SIZE = 20
@@ -169,7 +170,7 @@ interface UseProductFeedSyncReturn {
  */
 
 export function useProductFeedSync(): UseProductFeedSyncReturn {
-  const { getValidToken } = useAuth()
+  // Note: getValidToken no longer needed - apiClient handles token automatically
   const [isSyncing, setIsSyncing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [syncCount, setSyncCount] = useState(0)
@@ -424,38 +425,14 @@ export function useProductFeedSync(): UseProductFeedSyncReturn {
       // Continue to sync even if no products - we still want to sync shops
       // This ensures we always update the feed, even if only shops changed
 
-        // Get token for API call
-        const token = await getValidToken()
-
-        // Send to backend
-        const response = await fetch(
-          'https://fhyisvyhahqxryanjnby.supabase.co/functions/v1/sync-product-feed',
-          {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${token}`,
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-              products: aggregatedProducts,
-              followedShops: followedShops || []
-            })
-          }
-        )
-
-        if (!response.ok) {
-          const errorText = await response.text()
-          console.error('❌ Sync failed, response:', errorText)
-          let errorData
-          try {
-            errorData = JSON.parse(errorText)
-          } catch {
-            errorData = { error: errorText || `Failed to sync feed: ${response.status}` }
-          }
-          throw new Error(errorData.error || `Failed to sync feed: ${response.status}`)
-        }
-
-      await response.json()
+        // Send to backend using API client
+        await apiRequestJson('sync-product-feed', {
+          method: 'POST',
+          body: JSON.stringify({
+            products: aggregatedProducts,
+            followedShops: followedShops || []
+          })
+        })
       const syncTimestamp = Date.now()
       console.log(`✅ Feed synced successfully at ${new Date(syncTimestamp).toISOString()}: ${aggregatedProducts.length} products, ${followedShops?.length || 0} shops`)
         
@@ -490,7 +467,6 @@ export function useProductFeedSync(): UseProductFeedSyncReturn {
     recentError,
     shopsError,
     recommendedError,
-    getValidToken,
     productListsPagination.isComplete,
     productListsPagination.isPaginating,
     productListsPagination.isLoading,

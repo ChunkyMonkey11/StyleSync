@@ -14,6 +14,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { useAuth } from './useAuth'
 import { useFriendRequests } from './useFriendRequests'
 import { useProductFeedSync } from './useProductFeedSync' // Starts background sync automatically
+import { apiRequestJson } from '../utils/apiClient'
 
 interface Friend {
   id: string
@@ -102,30 +103,15 @@ export function useAppInitialization(): UseAppInitializationReturn {
       if (hasProfile === undefined) {
         console.log('📡 Checking profile via check-profile endpoint...')
         try {
-          const response = await fetch(
-            'https://fhyisvyhahqxryanjnby.supabase.co/functions/v1/check-profile',
-            {
-              method: 'GET',
-              headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
-              }
-            }
-          )
-
-          if (!response.ok) {
-            const errorText = await response.text()
-            console.error('❌ check-profile failed:', response.status, errorText)
-            // Default to false if check fails (show onboarding)
-            hasProfile = false
-          } else {
-            const result = await response.json()
-            hasProfile = result.hasProfile ?? false
-            if (result.profile?.shop_public_id) {
-              publicId = result.profile.shop_public_id
-            }
-            console.log('✅ Got profile status from check-profile:', hasProfile)
+          const result = await apiRequestJson<{ hasProfile?: boolean; profile?: { shop_public_id?: string } }>('check-profile', {
+            method: 'GET'
+          })
+          
+          hasProfile = result.hasProfile ?? false
+          if (result.profile?.shop_public_id) {
+            publicId = result.profile.shop_public_id
           }
+          console.log('✅ Got profile status from check-profile:', hasProfile)
         } catch (error) {
           console.error('❌ Error calling check-profile:', error)
           // Default to false if check fails (show onboarding)
@@ -143,24 +129,12 @@ export function useAppInitialization(): UseAppInitializationReturn {
       let friendsData: Friend[] | undefined
       try {
         // Fetch friends directly via API
-        const friendsResponse = await fetch(
-          'https://fhyisvyhahqxryanjnby.supabase.co/functions/v1/get-friends',
-          {
-            method: 'GET',
-            headers: {
-              'Authorization': `Bearer ${token}`,
-              'Content-Type': 'application/json'
-            }
-          }
-        )
-
-        if (friendsResponse.ok) {
-          const friendsResult = await friendsResponse.json()
-          friendsData = friendsResult.friends || []
-          console.log('✅ Friends fetched:', friendsData?.length ?? 0)
-        } else {
-          console.warn('⚠️ Friends fetch returned non-OK status:', friendsResponse.status)
-        }
+        const friendsResult = await apiRequestJson<{ friends?: Friend[] }>('get-friends', {
+          method: 'GET'
+        })
+        
+        friendsData = friendsResult.friends || []
+        console.log('✅ Friends fetched:', friendsData?.length ?? 0)
       } catch (friendsError) {
         console.warn('⚠️ Friends fetch failed (non-critical):', friendsError)
         // Don't throw - friends fetch is optional
@@ -203,7 +177,7 @@ export function useAppInitialization(): UseAppInitializationReturn {
       // Reset hasInitializedRef on error so retry can work
       hasInitializedRef.current = false
     }
-  }, [getValidToken, authData, refreshFriends])
+  }, [authData, refreshFriends])
 
   // Run initialization on mount
   useEffect(() => {

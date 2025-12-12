@@ -100,6 +100,7 @@ import { ProfileEditPage } from './user_profile/ProfileEditPage'
 import { FeedPage } from './feeds/FeedPage'
 import { useAuth } from '../hooks/useAuth'
 import { useFriendRequests } from '../hooks/useFriendRequests'
+import { apiRequestJson } from '../utils/apiClient'
 import pencilIcon from '../pencil.png'
 
 /**
@@ -139,8 +140,8 @@ export function MainApp() {
     /** Current user from Shop Minis SDK - provides Shop user data */
     const { currentUser } = useCurrentUser()
     
-    /** Auth hook - provides JWT token for API calls */
-    const { getValidToken } = useAuth()
+    /** Auth hook - no longer need getValidToken, apiClient handles it automatically */
+    const {} = useAuth()
     
     /** Friends hook - provides friends list and count */
     const { friends } = useFriendRequests()
@@ -195,10 +196,9 @@ export function MainApp() {
      * Fetches the current user's profile from the backend.
      * 
      * Flow:
-     * 1. Get JWT token via useAuth hook
-     * 2. Call check-profile Edge Function
-     * 3. Update profile state with fetched data
-     * 4. Handle errors and loading states
+     * 1. Call check-profile Edge Function using API client
+     * 2. Update profile state with fetched data
+     * 3. Handle errors and loading states
      * 
      * @throws {Error} If API call fails or returns non-OK status
      */
@@ -208,28 +208,12 @@ export function MainApp() {
             setIsLoading(true)
             setError(null)
             
-            // Get JWT token for authenticated API request
-            const token = await getValidToken()
-            
-            // Call check-profile Edge Function to fetch user profile
-            const response = await fetch(
-                'https://fhyisvyhahqxryanjnby.supabase.co/functions/v1/check-profile',
-                {
-                    method: 'GET',
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'application/json'
-                    }
-                }
-            )
+            // Call check-profile Edge Function using API client (handles auth automatically)
+            const result = await apiRequestJson<{ hasProfile?: boolean; profile?: UserProfile }>('check-profile', {
+                method: 'GET'
+            })
 
-            // Handle API errors
-            if (!response.ok) {
-                throw new Error(`Failed to fetch profile: ${response.status}`)
-            }
-
-            // Parse response and update profile state
-            const result = await response.json()
+            // Update profile state
             if (result.hasProfile && result.profile) {
                 setProfile(result.profile)
             } else {

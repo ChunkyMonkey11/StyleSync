@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useCurrentUser, Button, Input, Card } from '@shopify/shop-minis-react'
 import { useAuth } from '../../hooks/useAuth'
+import { apiRequestJson } from '../../utils/apiClient'
 
 interface UserProfile {
     id: string
@@ -22,7 +23,7 @@ interface ProfileEditPageProps {
 
 export function ProfileEditPage({ onBack, onSave }: ProfileEditPageProps) {
     const { currentUser } = useCurrentUser()
-    const { getValidToken, clearAuth } = useAuth()
+    const { clearAuth } = useAuth() // API client handles token automatically
     const isDebugBuild = import.meta.env.MODE !== 'production'
     
     // Form state
@@ -57,27 +58,16 @@ export function ProfileEditPage({ onBack, onSave }: ProfileEditPageProps) {
     const loadProfileData = async () => {
         try {
             setIsLoading(true)
-            const token = await getValidToken()
-            const response = await fetch(
-                'https://fhyisvyhahqxryanjnby.supabase.co/functions/v1/check-profile',
-                {
-                    method: 'GET',
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'application/json'
-                    }
-                }
-            )
+            const result = await apiRequestJson<{ hasProfile?: boolean; profile?: UserProfile }>('check-profile', {
+                method: 'GET'
+            })
 
-            if (response.ok) {
-                const result = await response.json()
-                if (result.hasProfile && result.profile) {
-                    const profile = result.profile
-                    setUsername(profile.username || '')
-                    setBio(profile.bio || '')
-                    setStylePreferences(profile.style_preferences || [])
-                    setInterests(profile.interests || [])
-                }
+            if (result.hasProfile && result.profile) {
+                const profile = result.profile
+                setUsername(profile.username || '')
+                setBio(profile.bio || '')
+                setStylePreferences(profile.style_preferences || [])
+                setInterests(profile.interests || [])
             }
         } catch (error) {
             console.error('Error loading profile:', error)
@@ -149,8 +139,6 @@ export function ProfileEditPage({ onBack, onSave }: ProfileEditPageProps) {
         setErrors({})
         
         try {
-            const token = await getValidToken()
-            
             // Prepare profile data
             const profileData = {
                 username: username.toLowerCase(),
@@ -164,25 +152,12 @@ export function ProfileEditPage({ onBack, onSave }: ProfileEditPageProps) {
             
             console.log('Updating profile with data:', profileData)
             
-            // Call create-profile Edge Function (it handles both create and update)
-            const response = await fetch(
-                'https://fhyisvyhahqxryanjnby.supabase.co/functions/v1/create-profile',
-                {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ profileData })
-                }
-            )
-
-            if (!response.ok) {
-                const errorData = await response.json()
-                throw new Error(errorData.error || 'Failed to update profile')
-            }
-
-            const result = await response.json()
+            // Call create-profile Edge Function using API client (it handles both create and update)
+            const result = await apiRequestJson<{ profile?: UserProfile }>('create-profile', {
+                method: 'POST',
+                body: JSON.stringify({ profileData })
+            })
+            
             console.log('Profile updated:', result.profile)
             
             onSave() // Navigate back to profile page

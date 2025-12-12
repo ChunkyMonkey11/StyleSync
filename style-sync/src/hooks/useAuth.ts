@@ -3,9 +3,14 @@
 
 import { useGenerateUserToken, useSecureStorage } from '@shopify/shop-minis-react'
 import { useCallback, useEffect, useState, useRef } from 'react'
+import { initializeApiClient } from '../utils/apiClient'
 
 // The auth Edge Function endpoint
 const AUTH_API = 'https://fhyisvyhahqxryanjnby.supabase.co/functions/v1/auth'
+
+// Token refresh thresholds
+const TOKEN_REFRESH_THRESHOLD = 3600000 // 1 hour (changed from 1 day)
+const BACKGROUND_CHECK_INTERVAL = 300000 // 5 minutes
 
 // Structure of stored authentication data
 interface AuthData {
@@ -34,10 +39,14 @@ export function useAuth() {
   // State
   const [jwtToken, setJwtToken] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
+  const [isRefreshing, setIsRefreshing] = useState(false)
   const [authData, setAuthData] = useState<AuthData | null>(null)
   
   // Cache for in-flight token fetch promise to prevent duplicate concurrent requests
   const tokenFetchPromiseRef = useRef<Promise<string> | null>(null)
+  
+  // Background refresh interval ref
+  const backgroundRefreshIntervalRef = useRef<number | null>(null)
   
   // Cache for getSecret() result to avoid rate limiting
   const secretCacheRef = useRef<{ data: string | null; timestamp: number } | null>(null)
@@ -82,9 +91,9 @@ export function useAuth() {
           try {
             const data: AuthData = JSON.parse(stored)
             
-            // Check if token is still valid (with 1 day buffer for safety)
-            // If expires in more than 1 day, we can still use it
-            if (data.expiresAt > Date.now() + 86400000) {  // 86400000ms = 1 day
+            // Check if token is still valid (with 1 hour buffer for safety)
+            // If expires in more than 1 hour, we can still use it
+            if (data.expiresAt > Date.now() + TOKEN_REFRESH_THRESHOLD) {
               setJwtToken(data.token)
               setAuthData(data)
               console.log('✅ Loaded existing JWT token from secure storage')
@@ -129,8 +138,8 @@ export function useAuth() {
 
     // SECOND: Check in-memory state first (fastest, no API call)
     if (jwtToken && authData) {
-      // Check if token is still valid (with 1 day buffer)
-      if (authData.expiresAt > Date.now() + 86400000) {
+      // Check if token is still valid (with 1 hour buffer)
+      if (authData.expiresAt > Date.now() + TOKEN_REFRESH_THRESHOLD) {
         console.log('✅ Using existing JWT token from memory')
         return jwtToken
       }
@@ -142,8 +151,8 @@ export function useAuth() {
       if (stored) {
         try {
           const data: AuthData = JSON.parse(stored)
-          // If expires in more than 1 day, use existing token from storage
-          if (data.expiresAt > Date.now() + 86400000) {
+          // If expires in more than 1 hour, use existing token from storage
+          if (data.expiresAt > Date.now() + TOKEN_REFRESH_THRESHOLD) {
             console.log('✅ Using existing JWT token from storage')
             // Update this instance's in-memory state for consistency
             setJwtToken(data.token)
@@ -287,6 +296,91 @@ export function useAuth() {
   }, [jwtToken, authData, generateUserToken, getCachedSecret, setSecret])
 
   // ============================================
+  // REFRESH TOKEN (EXPLICIT)
+  // ============================================
+  /**
+   * Explicitly refresh the token
+   * Used by API client when 401 is detected
+   */
+  const refreshToken = useCallback(async (): Promise<string> => {
+    // If already refreshing, wait for existing refresh
+    if (isRefreshing && tokenFetchPromiseRef.current) {
+      console.log('♻️ Token refresh already in progress, waiting...')
+      return tokenFetchPromiseRef.current
+    }
+
+    setIsRefreshing(true)
+    try {
+      // Force token refresh by clearing the cached promise
+      tokenFetchPromiseRef.current = null
+      const token = await getValidToken()
+      console.log('✅ Token refreshed successfully')
+      return token
+    } finally {
+      setIsRefreshing(false)
+    }
+  }, [isRefreshing, getValidToken])
+
+  // ============================================
+  // BACKGROUND TOKEN REFRESH
+  // ============================================
+  /**
+   * Background token refresh that checks periodically
+   * Refreshes token when it expires within 1 hour
+   */
+  useEffect(() => {
+    const checkAndRefreshToken = async () => {
+      try {
+        // Check if we have a token
+        if (!authData || !jwtToken) {
+          return
+        }
+
+        // Check if token expires within threshold
+        const timeUntilExpiry = authData.expiresAt - Date.now()
+        
+        if (timeUntilExpiry <= TOKEN_REFRESH_THRESHOLD && timeUntilExpiry > 0) {
+          console.log('🔄 Background: Token expiring soon, refreshing...')
+          // Refresh token silently in background
+          await refreshToken()
+        } else if (timeUntilExpiry <= 0) {
+          console.log('⏰ Background: Token expired, refreshing...')
+          await refreshToken()
+        }
+      } catch (error) {
+        console.error('❌ Background token refresh failed:', error)
+        // Don't throw - background refresh failures shouldn't break the app
+      }
+    }
+
+    // Initial check
+    checkAndRefreshToken()
+
+    // Set up interval to check every 5 minutes
+    const intervalId = window.setInterval(checkAndRefreshToken, BACKGROUND_CHECK_INTERVAL)
+    backgroundRefreshIntervalRef.current = intervalId
+
+    // Cleanup interval on unmount
+    return () => {
+      if (backgroundRefreshIntervalRef.current) {
+        clearInterval(backgroundRefreshIntervalRef.current)
+        backgroundRefreshIntervalRef.current = null
+      }
+    }
+  }, [authData, jwtToken, refreshToken])
+
+  // ============================================
+  // INITIALIZE API CLIENT
+  // ============================================
+  /**
+   * Initialize API client with token getter and refresher
+   * This allows the API client to automatically handle 401s
+   */
+  useEffect(() => {
+    initializeApiClient(getValidToken, refreshToken)
+  }, [getValidToken, refreshToken])
+
+  // ============================================
   // CLEAR AUTHENTICATION
   // ============================================
   /**
@@ -307,8 +401,10 @@ export function useAuth() {
   // Return hook interface
   return {
     getValidToken,    // Call this to get a token for API requests
+    refreshToken,     // Explicit token refresh (used by API client)
     clearAuth,        // Call this to logout/clear token
     isLoading,        // True when fetching new token
+    isRefreshing,     // True when token is being refreshed
     isAuthenticated: !!jwtToken,  // True if we have a token
     authData          // Full auth data including hasProfile and profile
   }

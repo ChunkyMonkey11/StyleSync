@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react'
 import { useAuth } from './useAuth'
+import { apiRequestJson } from '../utils/apiClient'
 
 interface FriendRequest {
   id: string
@@ -59,29 +60,10 @@ export function useFriendRequests(): UseFriendRequestsReturn {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // Helper function to make API calls
+  // Helper function to make API calls using centralized API client
   const makeApiCall = useCallback(async (endpoint: string, options: RequestInit = {}) => {
-    const token = await getValidToken()
-    
-    const response = await fetch(
-      `https://fhyisvyhahqxryanjnby.supabase.co/functions/v1/${endpoint}`,
-      {
-        ...options,
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-          ...options.headers,
-        },
-      }
-    )
-
-    if (!response.ok) {
-      const errorData = await response.json()
-      throw new Error(errorData.error || `API call failed: ${response.status}`)
-    }
-
-    return response.json()
-  }, [getValidToken])
+    return apiRequestJson(endpoint, options)
+  }, [])
 
   // Helper function to deduplicate requests by ID
   const deduplicateRequests = useCallback((requests: FriendRequest[]): FriendRequest[] => {
@@ -115,9 +97,9 @@ export function useFriendRequests(): UseFriendRequestsReturn {
       
       // Fetch all data in parallel
       const [sentRequestsData, receivedRequestsData, friendsData] = await Promise.all([
-        makeApiCall('get-friend-requests?type=sent'),
-        makeApiCall('get-friend-requests?type=received'),
-        makeApiCall('get-friends')
+        makeApiCall('get-friend-requests?type=sent') as Promise<{ requests?: FriendRequest[] }>,
+        makeApiCall('get-friend-requests?type=received') as Promise<{ requests?: FriendRequest[] }>,
+        makeApiCall('get-friends') as Promise<{ friends?: Friend[] }>
       ])
       
       // Deduplicate requests and friends to prevent duplicates

@@ -4,6 +4,7 @@ import { useFriendRequests } from '../../hooks/useFriendRequests'
 import { useFriendFeed } from '../../hooks/useFriendFeed'
 import { useProductFeedSync } from '../../hooks/useProductFeedSync'
 import { useAuth } from '../../hooks/useAuth'
+import { apiRequestJson } from '../../utils/apiClient'
 
 interface UserProfile {
   shop_public_id: string
@@ -44,7 +45,7 @@ interface Product {
 
 export function FeedPage({ onBack }: FeedPageProps) {
   const { currentUser } = useCurrentUser()
-  const { getValidToken } = useAuth()
+  const {} = useAuth() // API client handles token automatically
   const { navigateToShop } = useShopNavigation()
   const [selectedFriendId, setSelectedFriendId] = useState<string | null>(null)
   const [myProfile, setMyProfile] = useState<UserProfile | null>(null)
@@ -62,28 +63,17 @@ export function FeedPage({ onBack }: FeedPageProps) {
   // Fetch current user's profile to get shop_public_id
   const fetchMyProfile = async () => {
     try {
-      const token = await getValidToken()
-      const response = await fetch(
-        'https://fhyisvyhahqxryanjnby.supabase.co/functions/v1/check-profile',
-        {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        }
-      )
+      const result = await apiRequestJson<{ hasProfile?: boolean; profile?: UserProfile }>('check-profile', {
+        method: 'GET'
+      })
 
-      if (response.ok) {
-        const result = await response.json()
-        if (result.hasProfile && result.profile) {
-          setMyProfile({
-            shop_public_id: result.profile.shop_public_id,
-            username: result.profile.username,
-            display_name: result.profile.display_name,
-            profile_pic: result.profile.profile_pic
-          })
-        }
+      if (result.hasProfile && result.profile) {
+        setMyProfile({
+          shop_public_id: result.profile.shop_public_id,
+          username: result.profile.username,
+          display_name: result.profile.display_name,
+          profile_pic: result.profile.profile_pic
+        })
       }
     } catch (error) {
       console.error('Error fetching my profile:', error)

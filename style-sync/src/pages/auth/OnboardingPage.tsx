@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useCurrentUser, Button, Input, Card, Image } from '@shopify/shop-minis-react'
 import { useAuth } from '../../hooks/useAuth'
+import { apiRequestJson } from '../../utils/apiClient'
 
 interface OnboardingPageProps {
     onComplete: () => void
@@ -8,7 +9,7 @@ interface OnboardingPageProps {
 
 export function OnboardingPage({ onComplete }: OnboardingPageProps) {
     const { currentUser, loading } = useCurrentUser()
-    const { getValidToken } = useAuth()
+    const {} = useAuth() // API client handles token automatically
     const [username, setUsername] = useState('')
     const [bio, setBio] = useState('')
     const [stylePreferences, setStylePreferences] = useState<string[]>([])
@@ -97,9 +98,6 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps) {
         setIsSubmitting(true)
         
         try {
-            // Get JWT token for authentication
-            const token = await getValidToken()
-            
             // Prepare profile data
             // Note: We don't send id or shop_public_id - Edge Function handles these
             const profileData = {
@@ -115,25 +113,12 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps) {
             
             console.log('Creating profile with data:', profileData)
             
-            // Call create-profile Edge Function
-            const response = await fetch(
-                'https://fhyisvyhahqxryanjnby.supabase.co/functions/v1/create-profile',
-                {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ profileData })
-                }
-            )
-
-            if (!response.ok) {
-                const errorData = await response.json()
-                throw new Error(errorData.error || 'Failed to create profile')
-            }
-
-            const result = await response.json()
+            // Call create-profile Edge Function using API client
+            const result = await apiRequestJson<{ profile?: any }>('create-profile', {
+                method: 'POST',
+                body: JSON.stringify({ profileData })
+            })
+            
             console.log('Profile created:', result.profile)
             
             alert('Profile created successfully!')
