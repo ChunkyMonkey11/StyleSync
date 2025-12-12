@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react'
 import { Card, Button, Image } from '@shopify/shop-minis-react'
 import { useAuth } from '../../hooks/useAuth'
 import { useFriendRequests } from '../../hooks/useFriendRequests'
-import { apiRequestJson } from '../../utils/apiClient'
 
 interface UserProfile {
     id: string
@@ -23,8 +22,8 @@ interface ProfilePageProps {
 }
 
 export function ProfilePage({ onBack, onEdit }: ProfilePageProps) {
-    const {} = useAuth() // API client handles auth automatically
-    const { friends, refreshData } = useFriendRequests()
+    const { getValidToken } = useAuth()
+    const { friends } = useFriendRequests()
     const [profile, setProfile] = useState<UserProfile | null>(null)
     const [isLoading, setIsLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
@@ -32,21 +31,33 @@ export function ProfilePage({ onBack, onEdit }: ProfilePageProps) {
     // Get friends count
     const friendsCount = friends.length
 
-    // Fetch user profile and friends data on mount
+    // Fetch user profile on mount
     useEffect(() => {
         fetchUserProfile()
-        refreshData() // Load friends data
-    }, [refreshData])
+    }, [])
 
     const fetchUserProfile = async () => {
         try {
             setIsLoading(true)
             setError(null)
             
-            const result = await apiRequestJson<{ hasProfile?: boolean; profile?: any }>('check-profile', {
-                method: 'GET'
-            })
+            const token = await getValidToken()
+            const response = await fetch(
+                'https://fhyisvyhahqxryanjnby.supabase.co/functions/v1/check-profile',
+                {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                }
+            )
 
+            if (!response.ok) {
+                throw new Error(`Failed to fetch profile: ${response.status}`)
+            }
+
+            const result = await response.json()
             if (result.hasProfile && result.profile) {
                 setProfile(result.profile)
             } else {
