@@ -101,8 +101,9 @@ import { FeedPage } from './feeds/FeedPage'
 import { DeckGuidePage } from './deck/DeckGuidePage'
 import { useAuth } from '../hooks/useAuth'
 import { useFriendRequests } from '../hooks/useFriendRequests'
+import { FeedsDeckButton } from '../components/FeedsDeckButton'
+import { DealingOverlay } from '../components/DealingOverlay'
 import pencilIcon from '../pencil.png'
-import { LogoHeader } from '../components/LogoHeader'
 
 /**
  * UserProfile interface
@@ -173,6 +174,13 @@ export function MainApp() {
      * Displays error message and retry button if fetch fails.
      */
     const [error, setError] = useState<string | null>(null)
+    
+    /**
+     * Feeds deck state
+     */
+    const [isDeckOpening, setIsDeckOpening] = useState(false)
+    const [showDealingOverlay, setShowDealingOverlay] = useState(false)
+    const [deckButtonPosition, setDeckButtonPosition] = useState<{ x: number; y: number } | undefined>(undefined)
     
 
     // ============================================
@@ -271,6 +279,54 @@ export function MainApp() {
             return currentUser.avatarImage.url
         }
         return null
+    }
+
+    /**
+     * Handles deck button tap: shows dealing overlay animation
+     */
+    const handleDeckOpen = async () => {
+        try {
+            setIsDeckOpening(true)
+            
+            // Get the deck button's position immediately
+            const deckButton = document.querySelector('[aria-label="Open Feeds Deck"]') as HTMLElement
+            if (deckButton) {
+                const rect = deckButton.getBoundingClientRect()
+                setDeckButtonPosition({
+                    x: rect.left + rect.width / 2,
+                    y: rect.top + rect.height / 2
+                })
+            }
+            
+            // Show overlay immediately - no delay
+            setIsDeckOpening(false)
+            setShowDealingOverlay(true)
+        } catch (err) {
+            console.error('Error opening deck:', err)
+            setIsDeckOpening(false)
+            // On error, just navigate to feeds directly
+            setCurrentView('feeds')
+        }
+    }
+
+    /**
+     * Handles dealing overlay finish: navigates to feeds
+     */
+    const handleDealingFinish = () => {
+        setIsDeckOpening(false)
+        setShowDealingOverlay(false)
+        setDeckButtonPosition(undefined)
+        setCurrentView('feeds')
+    }
+
+    /**
+     * Handles skip animation: navigates immediately to feeds
+     */
+    const handleDealingSkip = () => {
+        setIsDeckOpening(false)
+        setShowDealingOverlay(false)
+        setDeckButtonPosition(undefined)
+        setCurrentView('feeds')
     }
     
 
@@ -382,7 +438,6 @@ export function MainApp() {
         return (
             <div className="min-h-screen p-4 max-w-md mx-auto">
                 {/* Premium Logo Header */}
-                <LogoHeader />
                 <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg p-4 text-center">
                     <p className="text-white mb-3">{error}</p>
                     <button 
@@ -403,15 +458,25 @@ export function MainApp() {
     // Displays profile summary, quick access cards, and navigation buttons.
     
     return (
-        <div className="min-h-screen p-4 max-w-md mx-auto">
-            {/* Premium Logo Header */}
-            <LogoHeader />
+        <>
+            {/* Dealing Overlay */}
+            {showDealingOverlay && (
+                <DealingOverlay
+                    onFinish={handleDealingFinish}
+                    onSkip={handleDealingSkip}
+                    deckButtonPosition={deckButtonPosition}
+                />
+            )}
 
-            {/* Hero Profile Section */}
-            <div className="mb-8">
-                <div className="flex flex-col items-center">
-                    {/* Profile Picture Container */}
-                    <div className="relative mb-4">
+            {/* Hide main view when overlay is active to prevent flash */}
+            <div className="min-h-screen p-4 max-w-md mx-auto" style={{
+                opacity: showDealingOverlay ? 0 : 1,
+                pointerEvents: showDealingOverlay ? 'none' : 'auto',
+                transition: 'opacity 200ms ease-out'
+            }}>
+                {/* Profile Picture at Top (where logo was) */}
+                <div className="w-full flex flex-col items-center mb-8" style={{ paddingTop: 'max(env(safe-area-inset-top, 1rem), 1rem)', paddingBottom: '1rem' }}>
+                    <div className="relative">
                         <button
                             onClick={() => setCurrentView('profile')}
                             className="w-[135px] h-[135px] rounded-full border-4 border-white/30 shadow-lg overflow-hidden cursor-pointer hover:opacity-90 transition-opacity"
@@ -451,39 +516,34 @@ export function MainApp() {
                     
                     {/* Username */}
                     {profile && (
-                        <h2 className="text-white text-xl font-semibold mb-2">
+                        <h2 className="text-white text-xl font-semibold mt-4 mb-2">
                             @{profile.username}
                         </h2>
                     )}
                 </div>
-            </div>
 
-            <div className="space-y-4">
-
-                {/* Feeds Card - Quick access to feeds */}
-                <div className="bg-white p-4 rounded-lg border shadow-sm">
-                    <h2 className="font-semibold mb-2">Feeds</h2>
-                    <p className="text-sm text-gray-600 mb-3">See your friends' style!</p>
-                    <button 
-                        onClick={() => setCurrentView('feeds')}
-                        className="w-full bg-purple-600 text-white py-2 px-4 rounded-lg hover:bg-purple-700 transition-colors"
-                    >
-                        View Feeds
-                    </button>
+                {/* Feeds Deck Button */}
+                <div className="mb-8 flex flex-col items-center">
+                    <FeedsDeckButton
+                        onOpen={handleDeckOpen}
+                        disabled={isDeckOpening || isLoading}
+                    />
                 </div>
 
-                {/* Friends Card - Quick access to friends management */}
-                <div className="bg-white p-4 rounded-lg border shadow-sm">
-                    <h2 className="font-semibold mb-2">Friends</h2>
-                    <p className="text-sm text-gray-600 mb-3">Connect with friends to see their style!</p>
-                    <button 
-                        onClick={() => setCurrentView('friends')}
-                        className="w-full bg-purple-600 text-white py-2 px-4 rounded-lg hover:bg-purple-700 transition-colors"
-                    >
-                        Manage Friends
-                    </button>
+                <div className="space-y-4">
+                    {/* Friends Card - Quick access to friends management */}
+                    <div className="bg-white p-4 rounded-lg border shadow-sm">
+                        <h2 className="font-semibold mb-2">Friends</h2>
+                        <p className="text-sm text-gray-600 mb-3">Connect with friends to see their style!</p>
+                        <button 
+                            onClick={() => setCurrentView('friends')}
+                            className="w-full bg-purple-600 text-white py-2 px-4 rounded-lg hover:bg-purple-700 transition-colors"
+                        >
+                            Manage Friends
+                        </button>
+                    </div>
                 </div>
             </div>
-        </div>
+        </>
     )
 }

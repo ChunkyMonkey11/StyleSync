@@ -1,299 +1,199 @@
 import { useState, useEffect } from 'react'
-import { Image, Button, useCurrentUser, ProductCard, useShopNavigation } from '@shopify/shop-minis-react'
-import { useFriendRequests } from '../../hooks/useFriendRequests'
-import { useFriendFeed } from '../../hooks/useFriendFeed'
-import { useProductFeedSync } from '../../hooks/useProductFeedSync'
-import { useAuth } from '../../hooks/useAuth'
-import { apiRequestJson } from '../../utils/apiClient'
-
-interface UserProfile {
-  shop_public_id: string
-  username: string
-  display_name: string
-  profile_pic: string | null
-}
+import { FriendCard } from '../../types/card'
+import { getFriendsCards } from '../../utils/api/friends'
+import { FriendPokerCard } from '../../components/FriendPokerCard'
 
 interface FeedPageProps {
   onBack: () => void
 }
 
-// Product type for ProductCard (from Shopify Shop Minis)
-// Note: Using a simplified version that matches what ProductCard expects
-interface Product {
-  id: string
-  title: string
-  price: {
-    amount: string
-    currencyCode: string
-  }
-  featuredImage?: {
-    url: string
-    altText: string
-    sensitive: boolean
-  } | null
-  shop: {
-    id: string
-    name: string
-  }
-  defaultVariantId: string
-  isFavorited: boolean
-  reviewAnalytics: {
-    averageRating?: number | null
-    reviewCount?: number | null
-  }
-}
+type ViewMode = 'grid' | 'list'
 
 export function FeedPage({ onBack }: FeedPageProps) {
-  const { currentUser } = useCurrentUser()
-  const {} = useAuth() // API client handles token automatically
-  const { navigateToShop } = useShopNavigation()
-  const [selectedFriendId, setSelectedFriendId] = useState<string | null>(null)
-  const [myProfile, setMyProfile] = useState<UserProfile | null>(null)
-  const { friends, isLoading: friendsLoading, refreshData } = useFriendRequests()
-  const { 
-    products, 
-    followedShops, 
-    isLoading: feedLoading, 
-    error: feedError,
-    hasMore,
-    fetchMore
-  } = useFriendFeed(selectedFriendId)
-  const { isSyncing, error: syncError } = useProductFeedSync()
+  const [cards, setCards] = useState<FriendCard[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [viewMode, setViewMode] = useState<ViewMode>('grid')
 
-  // Fetch current user's profile to get shop_public_id
-  const fetchMyProfile = async () => {
-    try {
-      const result = await apiRequestJson<{ hasProfile?: boolean; profile?: UserProfile }>('check-profile', {
-        method: 'GET'
-      })
-
-      if (result.hasProfile && result.profile) {
-        setMyProfile({
-          shop_public_id: result.profile.shop_public_id,
-          username: result.profile.username,
-          display_name: result.profile.display_name,
-          profile_pic: result.profile.profile_pic
-        })
-      }
-    } catch (error) {
-      console.error('Error fetching my profile:', error)
-    }
-  }
-
-  // Load friends and user profile on mount
   useEffect(() => {
-    refreshData()
-    fetchMyProfile()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [refreshData])
+    // Scroll to top when page loads
+    window.scrollTo({ top: 0, behavior: 'instant' })
+    fetchFriendCards()
+  }, [])
 
-  // Note: Feed sync now happens automatically via useProductFeedSync useEffect
-
-  /**
-   * Transform FeedProduct from database to Product format for ProductCard
-   */
-  const transformFeedProductToProduct = (feedProduct: any, shopInfo?: { id: string; name: string }): Product => {
-    // Extract shop info from followedShops if available, or use defaults
-    const shop = shopInfo || {
-      id: feedProduct.product_id, // Fallback to product_id if no shop info
-      name: 'Shop'
-    }
-
-    // Create featuredImage from product_image
-    const featuredImage = feedProduct.product_image
-      ? {
-          url: feedProduct.product_image,
-          altText: feedProduct.product_title || 'Product image',
-          sensitive: false
-        }
-      : null
-
-    return {
-      id: feedProduct.product_id,
-      title: feedProduct.product_title,
-      price: {
-        amount: feedProduct.product_price || '0.00',
-        currencyCode: feedProduct.product_currency || 'USD'
-      },
-      featuredImage,
-      shop,
-      defaultVariantId: feedProduct.product_id, // Use product_id as variant ID
-      isFavorited: false, // Can be enhanced later to check saved products
-      reviewAnalytics: {
-        // Can be enhanced later if we store review data
-        averageRating: null,
-        reviewCount: null
-      }
+  const fetchFriendCards = async () => {
+    try {
+      setIsLoading(true)
+      setError(null)
+      const friendCards = await getFriendsCards()
+      setCards(friendCards)
+    } catch (err) {
+      console.error('Error fetching friend cards:', err)
+      setError(err instanceof Error ? err.message : 'Failed to load friend cards')
+    } finally {
+      setIsLoading(false)
     }
   }
 
-  /**
-   * Handle favorite toggle for ProductCard
-   * Note: ProductCard only passes isFavorited boolean, not productId
-   */
-  const handleFavoriteToggled = (isFavorited: boolean) => {
-    console.log('Favorite toggled:', isFavorited)
-    // TODO: Sync favorite state to backend if needed
-    // For now, this is UI-only as ProductCard handles the visual state
-    // Note: We'd need to track which product was favorited separately if needed
-  }
-
-  /**
-   * Handle shop card click - navigate to shop in Shop app
-   */
-  const handleShopClick = (shopId: string) => {
-    if (shopId) {
-      navigateToShop({ shopId })
-    }
-  }
-
-  const handleFriendClick = (friendShopPublicId: string) => {
-    setSelectedFriendId(friendShopPublicId)
-  }
-
-  const handleMyFeedClick = () => {
-    if (myProfile) {
-      setSelectedFriendId(myProfile.shop_public_id)
-    }
-  }
-
-  const handleBackToFriends = () => {
-    setSelectedFriendId(null)
-  }
-
-  // If a friend (or self) is selected, show their feed
-  if (selectedFriendId) {
-    // Determine whose feed we're viewing
-    const isMyFeed = myProfile && selectedFriendId === myProfile.shop_public_id
-    const selectedFriend = friends.find(f => f.shop_public_id === selectedFriendId)
-    const displayName = isMyFeed 
-      ? myProfile.username 
-      : selectedFriend 
-        ? selectedFriend.friend_profile.username 
-        : 'User'
-    
+  // Filter cards by search query
+  const filteredCards = cards.filter(card => {
+    const query = searchQuery.toLowerCase()
     return (
-      <div className="min-h-screen ">
-        <div className="p-4 max-w-md mx-auto">
-          {/* Header */}
-          <div className="flex items-center mb-6 pt-2">
-            <button 
-              onClick={handleBackToFriends}
-              className="mr-3 px-4 py-2.5 rounded-2xl backdrop-blur-xl bg-white/20 border border-white/30 shadow-lg hover:bg-white/30 active:scale-95 transition-all duration-200 text-white font-medium"
-              style={{
-                boxShadow: '0 8px 32px 0 rgba(255, 255, 255, 0.1), inset 0 1px 0 0 rgba(255, 255, 255, 0.2)'
-              }}
-            >
-              ← Back
-            </button>
-            <h1 className="text-2xl font-bold text-white">@{displayName}</h1>
-          </div>
+      card.username.toLowerCase().includes(query) ||
+      (card.displayName?.toLowerCase().includes(query) ?? false)
+    )
+  })
 
-        {/* Error Display */}
-        {feedError && (
-          <div className="mb-4 p-3 bg-red-500/20 backdrop-blur-sm border border-red-300/30 rounded-lg text-red-100 text-sm">
-            {feedError}
-          </div>
-        )}
+  // Handle card click - navigate to friend profile (stub for now)
+  const handleCardClick = (card: FriendCard) => {
+    console.log('Navigate to friend profile:', card.userId)
+    // TODO: Navigate to friend profile page when implemented
+    // For now, this is a stub
+  }
 
-        {/* Loading State */}
-        {feedLoading && products.length === 0 && (
-          <div className="space-y-4">
-            {[1, 2, 3].map(i => (
-              <div key={i} className="bg-white/10 backdrop-blur-sm p-4 rounded-lg border border-white/20 shadow-lg animate-pulse">
-                <div className="h-48 bg-white/20 rounded mb-2"></div>
-                <div className="h-4 bg-white/20 rounded mb-2"></div>
-                <div className="h-3 bg-white/20 rounded w-3/4"></div>
-              </div>
-            ))}
-          </div>
-        )}
+  return (
+    <div className="min-h-screen p-4 max-w-md mx-auto" style={{ paddingTop: 'max(env(safe-area-inset-top, 1rem), 1rem)' }}>
+      {/* Header */}
+      <div className="flex items-center justify-between mb-6 pt-4">
+        <button
+          onClick={onBack}
+          className="px-3 py-2 text-white/70 hover:text-white hover:bg-white/10 rounded-xl transition-all"
+          style={{ fontFamily: "'Inter', sans-serif" }}
+        >
+          ← Back
+        </button>
+        <div className="flex-1 text-center">
+          <h1
+            className="text-2xl font-bold text-white"
+            style={{
+              fontFamily: "'Inter', sans-serif",
+              textShadow: '0 0 20px rgba(255, 255, 255, 0.3), 0 0 40px rgba(255, 255, 255, 0.15)'
+            }}
+          >
+            Feeds
+          </h1>
+        </div>
+        <div className="w-16" /> {/* Spacer for centering */}
+      </div>
 
-        {/* Followed Shops Section */}
-        {followedShops.length > 0 && (
-          <div className="mb-6">
-            <h2 className="text-lg font-semibold mb-3 text-white">Shops Followed</h2>
-            <div className="flex gap-3 overflow-x-auto pb-2">
-              {followedShops.map(shop => (
-                <button
-                  key={shop.id}
-                  onClick={() => handleShopClick(shop.followed_shop_id)}
-                  className="flex-shrink-0 backdrop-blur-xl bg-white/20 border border-white/30 shadow-lg p-3 rounded-xl min-w-[120px] hover:bg-white/30 active:scale-95 transition-all duration-200 cursor-pointer"
-                  style={{
-                    boxShadow: '0 8px 32px 0 rgba(255, 255, 255, 0.1), inset 0 1px 0 0 rgba(255, 255, 255, 0.2)'
-                  }}
-                >
-                  {shop.followed_shop_logo ? (
-                    <Image 
-                      src={shop.followed_shop_logo} 
-                      alt={shop.followed_shop_name}
-                      className="w-16 h-16 rounded-full mx-auto mb-2 object-cover"
-                    />
-                  ) : (
-                    <div className="w-16 h-16 rounded-full mx-auto mb-2 bg-white/20 backdrop-blur-sm border border-white/30 flex items-center justify-center">
-                      <span className="text-white/80 text-xs">Shop</span>
-                    </div>
-                  )}
-                  <p className="text-xs text-center font-medium truncate text-white">{shop.followed_shop_name}</p>
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
+      {/* Search Bar */}
+      <div className="mb-4">
+        <input
+          type="text"
+          placeholder="Search friends..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="w-full px-4 py-2.5 bg-white/10 backdrop-blur-xl border border-white/20 rounded-xl text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+          style={{ fontFamily: "'Inter', sans-serif" }}
+        />
+      </div>
 
-        {/* Products Grid - Scrollable */}
-        {products.length > 0 ? (
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4 pb-4">
-              {products.map(product => {
-                // Find shop info for this product if available
-                // For now, we'll use a default shop since we don't have shop info per product
-                const shopInfo = followedShops.length > 0 
-                  ? { id: followedShops[0].followed_shop_id, name: followedShops[0].followed_shop_name }
-                  : undefined
-                
-                const productData = transformFeedProductToProduct(product, shopInfo)
-                
-                return (
-                  <div key={product.id} className="w-full">
-                    <ProductCard
-                      product={productData as any}
-                      onFavoriteToggled={handleFavoriteToggled}
-                      variant="compact"
-                    />
-                  </div>
-                )
-              })}
-            </div>
-
-            {/* Load More Button */}
-            {hasMore && (
-              <div className="text-center mt-6">
-                <Button 
-                  onClick={fetchMore}
-                  disabled={feedLoading}
-                  className="w-full"
-                >
-                  {feedLoading ? 'Loading...' : 'Load More'}
-                </Button>
-              </div>
-            )}
-          </div>
-        ) : !feedLoading && (
-          <div className="text-center py-12">
-            <div className="text-6xl mb-4">📦</div>
-            <h2 className="text-xl font-semibold mb-2 text-white">No products yet</h2>
-            <p className="text-white/80">This friend hasn't synced their feed yet.</p>
-          </div>
-        )}
+      {/* View Mode Toggle */}
+      <div className="flex justify-end mb-4">
+        <div className="flex bg-white/10 backdrop-blur-xl border border-white/20 rounded-xl p-1">
+          <button
+            onClick={() => setViewMode('grid')}
+            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+              viewMode === 'grid'
+                ? 'bg-white/20 text-white'
+                : 'text-white/70 hover:text-white'
+            }`}
+            style={{ fontFamily: "'Inter', sans-serif" }}
+          >
+            Grid
+          </button>
+          <button
+            onClick={() => setViewMode('list')}
+            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+              viewMode === 'list'
+                ? 'bg-white/20 text-white'
+                : 'text-white/70 hover:text-white'
+            }`}
+            style={{ fontFamily: "'Inter', sans-serif" }}
+          >
+            List
+          </button>
         </div>
       </div>
-    )
-  }
 
-  // Default view: Friends list
-  return (
-    <div className="p-4 max-w-md mx-auto">
+      {/* Loading State */}
+      {isLoading && (
+        <div className="space-y-4">
+          {[1, 2, 3, 4].map((i) => (
+            <div
+              key={i}
+              className="bg-white/10 backdrop-blur-sm p-4 rounded-lg border border-white/20 shadow-lg animate-pulse"
+            >
+              <div className="h-48 bg-white/20 rounded mb-2"></div>
+              <div className="h-4 bg-white/20 rounded mb-2"></div>
+              <div className="h-3 bg-white/20 rounded w-3/4"></div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Error State */}
+      {error && !isLoading && (
+        <div className="bg-red-500/20 backdrop-blur-xl border border-red-500/30 rounded-xl p-4 text-center">
+          <p className="text-red-100 mb-3">{error}</p>
+          <button
+            onClick={fetchFriendCards}
+            className="bg-white text-red-600 py-2 px-4 rounded-lg hover:bg-gray-100 transition-colors font-medium"
+          >
+            Retry
+          </button>
+        </div>
+      )}
+
+      {/* Empty State */}
+      {!isLoading && !error && filteredCards.length === 0 && (
+        <div className="text-center py-12 bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl shadow-[0_0_20px_rgba(255,255,255,0.05)] p-8">
+          <div className="text-5xl mb-4">🃏</div>
+          <p className="text-lg font-semibold text-white mb-2" style={{ fontFamily: "'Inter', sans-serif" }}>
+            {searchQuery ? 'No friends found' : 'No friends yet'}
+          </p>
+          <p className="text-sm text-white/70" style={{ fontFamily: "'Inter', sans-serif" }}>
+            {searchQuery
+              ? 'Try a different search term'
+              : "Add friends to deal your deck."}
+          </p>
+        </div>
+      )}
+
+      {/* Cards Grid/List */}
+      {!isLoading && !error && filteredCards.length > 0 && (
+        <div
+          className={
+            viewMode === 'grid'
+              ? 'grid grid-cols-2 gap-4 pb-8'
+              : 'space-y-4 pb-8'
+          }
+          style={{ marginTop: 0 }}
+        >
+          {filteredCards.map((card, index) => (
+            <div
+              key={card.userId}
+              className={viewMode === 'grid' ? '' : 'flex justify-center'}
+              style={{
+                animation: `slideUpFade 0.5s cubic-bezier(0.16, 1, 0.3, 1) backwards`,
+                animationDelay: `${index * 0.05}s`
+              }}
+            >
+              {viewMode === 'grid' ? (
+                <div className="w-full">
+                  <FriendPokerCard card={card} onClick={() => handleCardClick(card)} />
+                </div>
+              ) : (
+                <div className="w-full max-w-xs">
+                  <FriendPokerCard card={card} onClick={() => handleCardClick(card)} />
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
       <style>{`
         @keyframes slideUpFade {
           from {
@@ -305,160 +205,7 @@ export function FeedPage({ onBack }: FeedPageProps) {
             transform: translateY(0);
           }
         }
-        
-        .feed-card {
-          animation: slideUpFade 0.5s cubic-bezier(0.16, 1, 0.3, 1) backwards;
-        }
-        
-        .feed-card:nth-child(1) { animation-delay: 0.05s; }
-        .feed-card:nth-child(2) { animation-delay: 0.1s; }
-        .feed-card:nth-child(3) { animation-delay: 0.15s; }
-        .feed-card:nth-child(4) { animation-delay: 0.2s; }
-        .feed-card:nth-child(5) { animation-delay: 0.25s; }
-        .feed-card:nth-child(6) { animation-delay: 0.3s; }
       `}</style>
-      {/* Header */}
-      <div className="relative flex items-center justify-center mb-8 pt-6">
-        <button 
-          onClick={onBack}
-          className="absolute left-0 top-0 px-3 py-2 text-white/70 hover:text-white hover:bg-white/10 rounded-xl transition-all"
-          style={{ fontFamily: "'Inter', sans-serif" }}
-        >
-          ← Back
-        </button>
-        <div className="text-center">
-          <h1 
-            className="text-2xl font-bold text-white" 
-            style={{ 
-              fontFamily: "'Inter', sans-serif",
-              textShadow: '0 0 20px rgba(255, 255, 255, 0.3), 0 0 40px rgba(255, 255, 255, 0.15)'
-            }}
-          >
-            Feeds
-          </h1>
-          <p 
-            className="text-sm text-white/60 mt-1" 
-            style={{ fontFamily: "'Inter', sans-serif" }}
-          >
-            Shop through your friends' eyes
-          </p>
-        </div>
-        {syncError && (
-          <span className="absolute right-0 text-xs text-red-200 bg-red-500/20 px-3 py-1.5 rounded-xl backdrop-blur-sm border border-red-500/30 font-medium" style={{ fontFamily: "'Tessan Sans', sans-serif" }}>Sync failed</span>
-        )}
-      </div>
-
-      {/* Sync Status */}
-      {isSyncing && (
-        <div className="mb-4 p-4 bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl text-blue-100 text-sm shadow-[0_0_20px_rgba(255,255,255,0.05)]">
-          <div className="flex items-center gap-3">
-            <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse"></div>
-            <span className="font-medium" style={{ fontFamily: "'Tessan Sans', sans-serif" }}>Syncing your feed...</span>
-          </div>
-        </div>
-      )}
-
-      {/* Friends List */}
-      {friendsLoading ? (
-        <div className="space-y-3">
-          {[1, 2, 3].map(i => (
-            <div key={i} className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-3 shadow-[0_0_20px_rgba(255,255,255,0.05)] animate-pulse">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-white/20 rounded-full flex-shrink-0"></div>
-                <div className="flex-1">
-                  <div className="h-4 bg-white/20 rounded mb-2 w-24"></div>
-                  <div className="h-3 bg-white/20 rounded w-20"></div>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <div>
-          {/* My Feed Chip - Always show at top */}
-          {myProfile && (
-            <div className="mb-6">
-              <button
-                onClick={handleMyFeedClick}
-                className="w-full flex items-center gap-3 px-4 py-2.5 bg-white/5 backdrop-blur-xl border border-white/10 rounded-full shadow-[0_0_20px_rgba(255,255,255,0.05)] hover:bg-white/10 active:scale-95 active:bg-white/15 active:shadow-2xl transition-all duration-200"
-              >
-                {myProfile.profile_pic ? (
-                  <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0">
-                    <Image 
-                      src={myProfile.profile_pic} 
-                      alt={myProfile.username}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                ) : currentUser?.avatarImage?.url ? (
-                  <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0">
-                    <Image 
-                      src={currentUser.avatarImage.url} 
-                      alt={myProfile.username}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                ) : (
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-400 via-purple-500 to-purple-600 flex items-center justify-center flex-shrink-0">
-                    <span className="text-white text-sm font-bold" style={{ fontFamily: "'Tessan Sans', sans-serif" }}>
-                      {myProfile.username.charAt(0).toUpperCase()}
-                    </span>
-                  </div>
-                )}
-                <p className="text-sm font-medium text-white flex-1 text-left truncate" style={{ fontFamily: "'Tessan Sans', sans-serif" }}>@{myProfile.username}</p>
-                <span className="text-white/60 text-lg">→</span>
-              </button>
-            </div>
-          )}
-
-          {/* Friends Section */}
-          {friends.length > 0 ? (
-            <>
-              <div className="border-t border-white/10 pt-6 mt-6 mb-4">
-                <div className="space-y-3">
-                  {friends.map((friend, index) => (
-                    <button
-                      key={friend.id}
-                      onClick={() => handleFriendClick(friend.shop_public_id)}
-                      className={`feed-card w-full flex items-center gap-3 p-3 bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl shadow-[0_0_20px_rgba(255,255,255,0.05)] hover:bg-white/10 active:scale-95 active:bg-white/15 active:shadow-2xl transition-all duration-200`}
-                      style={{
-                        animationDelay: `${0.1 + index * 0.05}s`
-                      }}
-                    >
-                      {friend.friend_profile.profile_pic ? (
-                        <div className="w-12 h-12 rounded-full overflow-hidden flex-shrink-0">
-                          <Image 
-                            src={friend.friend_profile.profile_pic} 
-                            alt={friend.friend_profile.username}
-                            className="w-full h-full object-cover"
-                          />
-                        </div>
-                      ) : (
-                        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-400 via-purple-500 to-purple-600 flex items-center justify-center flex-shrink-0">
-                          <span className="text-white text-lg font-bold" style={{ fontFamily: "'Tessan Sans', sans-serif" }}>
-                            {friend.friend_profile.username.charAt(0).toUpperCase()}
-                          </span>
-                        </div>
-                      )}
-                      <div className="flex-1 min-w-0 text-left">
-                        <p className="text-sm font-medium text-white truncate" style={{ fontFamily: "'Tessan Sans', sans-serif" }}>@{friend.friend_profile.username}</p>
-                        <p className="text-xs font-normal text-white/60 truncate" style={{ fontFamily: "'Tessan Sans', sans-serif" }}>{friend.friend_profile.display_name}</p>
-                      </div>
-                      <span className="text-white/60 text-lg flex-shrink-0">→</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </>
-          ) : (
-            <div className="text-center py-12 bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl shadow-[0_0_20px_rgba(255,255,255,0.05)] p-8">
-              <div className="text-5xl mb-4">👥</div>
-              <p className="text-lg font-semibold text-white mb-2" style={{ fontFamily: "'Tessan Sans', sans-serif" }}>No friends yet</p>
-              <p className="text-sm text-white/70" style={{ fontFamily: "'Tessan Sans', sans-serif" }}>Add friends to see their style feeds!</p>
-            </div>
-          )}
-        </div>
-      )}
     </div>
   )
 }

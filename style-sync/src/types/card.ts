@@ -75,4 +75,21 @@ export const RANK_THRESHOLDS = {
   'A': { min: 250, max: Infinity }
 } as const
 
+/**
+ * Friend card data structure
+ * Represents a friend's poker card profile
+ */
+export interface FriendCard {
+  userId: string
+  username: string
+  displayName?: string
+  avatarUrl?: string | null
+  rank: CardRank
+  suit: CardSuit
+  stats?: {
+    friendsCount?: number
+    postsCount?: number
+    likesReceived?: number
+  }
+}
 
