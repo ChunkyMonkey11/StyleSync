@@ -34,3 +34,4 @@ CREATE POLICY "Users can view their own card profile" ON user_card_profile
         )
     );
 
+
