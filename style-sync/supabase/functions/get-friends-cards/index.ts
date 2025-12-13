@@ -120,14 +120,18 @@ Deno.serve(async (req) => {
           username,
           display_name,
           profile_pic,
-          shop_public_id
+          shop_public_id,
+          bio,
+          interests
         ),
         receiver_profile:userprofiles!friend_requests_receiver_id_fkey(
           id,
           username,
           display_name,
           profile_pic,
-          shop_public_id
+          shop_public_id,
+          bio,
+          interests
         )
       `)
       .eq('status', 'accepted')
@@ -152,6 +156,8 @@ Deno.serve(async (req) => {
         username: friendProfile.username,
         display_name: friendProfile.display_name,
         profile_pic: friendProfile.profile_pic,
+        bio: friendProfile.bio || '',
+        interests: friendProfile.interests || [],
         created_at: friendship.created_at
       }
     })
@@ -237,6 +243,8 @@ Deno.serve(async (req) => {
           username: friend.username,
           displayName: friend.display_name || friend.username,
           avatarUrl: friend.profile_pic || null,
+          bio: friend.bio || '',
+          interests: friend.interests || [],
           rank,
           suit,
           stats: {

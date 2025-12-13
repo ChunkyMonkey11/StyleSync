@@ -98,12 +98,15 @@ import { FriendsPage } from './social/FriendsPage'
 import { ProfilePage } from './user_profile/ProfilePage'
 import { ProfileEditPage } from './user_profile/ProfileEditPage'
 import { FeedPage } from './feeds/FeedPage'
+import { FriendFeedPage } from './feeds/FriendFeedPage'
 import { DeckGuidePage } from './deck/DeckGuidePage'
+import { FriendCard } from '../types/card'
 import { useAuth } from '../hooks/useAuth'
 import { useFriendRequests } from '../hooks/useFriendRequests'
 import { FeedsDeckButton } from '../components/FeedsDeckButton'
 import { DealingOverlay } from '../components/DealingOverlay'
 import pencilIcon from '../pencil.png'
+import friendsIcon from '../Friends-icon.svg'
 
 /**
  * UserProfile interface
@@ -145,7 +148,21 @@ export function MainApp() {
     const { getValidToken } = useAuth()
     
     /** Friends hook - provides friends list and count */
-    useFriendRequests()
+    const { receivedRequests, refreshData } = useFriendRequests()
+
+    // Refresh friend requests data on mount to get latest count
+    useEffect(() => {
+        refreshData()
+    }, [refreshData])
+
+    // Debug: Log received requests count
+    useEffect(() => {
+        console.log('[MainApp] Received requests:', {
+            count: receivedRequests?.length || 0,
+            requests: receivedRequests,
+            isEmpty: !receivedRequests || receivedRequests.length === 0
+        })
+    }, [receivedRequests])
 
     // ============================================
     // STATE MANAGEMENT
@@ -155,7 +172,12 @@ export function MainApp() {
      * Current view/page being displayed.
      * Controls which component is rendered based on user navigation.
      */
-    const [currentView, setCurrentView] = useState<'main' | 'friends' | 'profile' | 'profile-edit' | 'feeds' | 'deck-guide'>('main')
+    const [currentView, setCurrentView] = useState<'main' | 'friends' | 'profile' | 'profile-edit' | 'feeds' | 'deck-guide' | 'friend-feed'>('main')
+    
+    /**
+     * Selected friend for viewing their feed
+     */
+    const [selectedFriend, setSelectedFriend] = useState<FriendCard | null>(null)
     
     /**
      * User profile data fetched from backend.
@@ -194,6 +216,13 @@ export function MainApp() {
     useEffect(() => {
         fetchUserProfile()
     }, [])
+
+    /**
+     * Refresh friend requests data on mount to get latest count for badge.
+     */
+    useEffect(() => {
+        refreshData()
+    }, [refreshData])
     
 
     // ============================================
@@ -381,7 +410,31 @@ export function MainApp() {
      * Displays the pages of the people users follow so they can see their style.
      */
     if (currentView === 'feeds') {
-        return <FeedPage onBack={() => setCurrentView('main')} />
+        return (
+            <FeedPage 
+                onBack={() => setCurrentView('main')}
+                onFriendClick={(friendCard) => {
+                    setSelectedFriend(friendCard)
+                    setCurrentView('friend-feed')
+                }}
+            />
+        )
+    }
+
+    /**
+     * Friend Feed Page View
+     * Displays a specific friend's profile and product feed.
+     */
+    if (currentView === 'friend-feed' && selectedFriend) {
+        return (
+            <FriendFeedPage
+                friendCard={selectedFriend}
+                onBack={() => {
+                    setCurrentView('feeds')
+                    setSelectedFriend(null)
+                }}
+            />
+        )
     }
 
     /**
@@ -530,18 +583,51 @@ export function MainApp() {
                     />
                 </div>
 
-                <div className="space-y-4">
-                    {/* Friends Card - Quick access to friends management */}
-                    <div className="bg-white p-4 rounded-lg border shadow-sm">
-                        <h2 className="font-semibold mb-2">Friends</h2>
-                        <p className="text-sm text-gray-600 mb-3">Connect with friends to see their style!</p>
-                        <button 
-                            onClick={() => setCurrentView('friends')}
-                            className="w-full bg-purple-600 text-white py-2 px-4 rounded-lg hover:bg-purple-700 transition-colors"
-                        >
+                <div className="flex flex-col justify-center items-center mt-8">
+                    {/* Friends Icon Button */}
+                    <button
+                        onClick={() => setCurrentView('friends')}
+                        className="cursor-pointer hover:opacity-80 active:scale-95 transition-all duration-200 flex flex-col items-center"
+                        aria-label="Manage Friends"
+                    >
+                        <div className="relative inline-block">
+                            <img
+                                src={friendsIcon}
+                                alt="Friends"
+                                className="w-16 h-16 mb-2 relative z-0"
+                            />
+                            {/* Friend Request Badge */}
+                            {receivedRequests && receivedRequests.length > 0 ? (
+                                <div 
+                                    className="absolute top-0 right-0 rounded-full flex items-center justify-center shadow-xl"
+                                    style={{
+                                        backgroundColor: '#ef4444',
+                                        border: '2px solid #ffffff',
+                                        minWidth: '24px',
+                                        height: '24px',
+                                        padding: receivedRequests.length > 9 ? '0 4px' : '0 6px',
+                                        transform: 'translate(25%, -25%)',
+                                        zIndex: 1000,
+                                        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)'
+                                    }}
+                                >
+                                    <span 
+                                        className="text-xs font-bold leading-none"
+                                        style={{ 
+                                            color: '#ffffff',
+                                            fontSize: '11px',
+                                            fontWeight: '700'
+                                        }}
+                                    >
+                                        {receivedRequests.length > 9 ? '9+' : receivedRequests.length}
+                                    </span>
+                                </div>
+                            ) : null}
+                        </div>
+                        <span className="text-white font-bold text-sm">
                             Manage Friends
-                        </button>
-                    </div>
+                        </span>
+                    </button>
                 </div>
             </div>
         </>

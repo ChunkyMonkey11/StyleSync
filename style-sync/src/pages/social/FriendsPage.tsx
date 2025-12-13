@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Button, Input, Card, Image } from '@shopify/shop-minis-react'
+import { Button, Input } from '@shopify/shop-minis-react'
 import { useFriendRequests } from '../../hooks/useFriendRequests'
 
 interface FriendsPageProps {
@@ -129,7 +129,7 @@ export function FriendsPage({ onBack }: FriendsPageProps) {
             {/* Send Request Tab */}
             {activeTab === 'send' && (
                 <div className="space-y-4">
-                    <Card className="p-5 bg-white/95 backdrop-blur-sm border border-white/30 shadow-lg">
+                    <div className="p-5 bg-white/95 backdrop-blur-sm border border-white/30 shadow-lg rounded-xl">
                         <h2 className="font-semibold text-lg mb-4 text-gray-800">Send Friend Request</h2>
                         <div className="space-y-4">
                             <div>
@@ -156,11 +156,11 @@ export function FriendsPage({ onBack }: FriendsPageProps) {
                                 {isSubmitting ? 'Sending...' : 'Send Friend Request'}
                             </Button>
                         </div>
-                    </Card>
+                    </div>
 
                     {/* Sent Requests */}
                     {isLoading ? (
-                        <Card className="p-5 bg-white/95 backdrop-blur-sm border border-white/30 shadow-lg">
+                        <div className="p-5 bg-white/95 backdrop-blur-sm border border-white/30 shadow-lg rounded-xl">
                             <div className="animate-pulse space-y-3">
                                 {[1, 2].map((i) => (
                                     <div key={i} className="flex items-center gap-3">
@@ -172,59 +172,66 @@ export function FriendsPage({ onBack }: FriendsPageProps) {
                                     </div>
                                 ))}
                             </div>
-                        </Card>
+                        </div>
                     ) : sentRequests.length > 0 ? (
-                        <Card className="p-5 bg-white/95 backdrop-blur-sm border border-white/30 shadow-lg">
+                        <div className="p-5 bg-white/95 backdrop-blur-sm border border-white/30 shadow-lg rounded-xl">
                             <h3 className="font-semibold text-lg mb-4 text-gray-800">Sent Requests</h3>
                             <div className="space-y-3">
-                                {sentRequests.map((request) => (
-                                    <div 
-                                        key={request.id} 
-                                        className="flex items-center gap-3 p-3 bg-white/60 backdrop-blur-sm rounded-xl border border-gray-200/50 hover:bg-white/80 transition-all duration-200"
-                                    >
-                                        {/* Avatar */}
-                                        {request.receiver_profile?.profile_pic ? (
-                                            <Image
-                                                src={request.receiver_profile.profile_pic}
-                                                alt={request.receiver_profile.username || 'User'}
-                                                className="w-12 h-12 rounded-full object-cover border-2 border-white shadow-sm"
-                                            />
-                                        ) : (
-                                            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-400 to-purple-600 flex items-center justify-center border-2 border-white shadow-sm">
-                                                <span className="text-white text-lg font-semibold">
-                                                    {(request.receiver_profile?.username || 'U')[0]?.toUpperCase()}
-                                                </span>
+                                {sentRequests.map((request) => {
+                                    const receiverProfile = request.receiver_profile || {}
+                                    const username = receiverProfile.username || 'Unknown'
+                                    const displayName = receiverProfile.display_name || username
+                                    const profilePic = receiverProfile.profile_pic
+                                    
+                                    return (
+                                        <div 
+                                            key={request.id} 
+                                            className="flex items-center gap-3 p-3 bg-white/60 backdrop-blur-sm rounded-xl border border-gray-200/50 hover:bg-white/80 transition-all duration-200"
+                                        >
+                                            {/* Avatar */}
+                                            {profilePic ? (
+                                                <img
+                                                    src={profilePic}
+                                                    alt={username}
+                                                    className="w-12 h-12 rounded-full object-cover border-2 border-white shadow-sm flex-shrink-0"
+                                                />
+                                            ) : (
+                                                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-400 to-purple-600 flex items-center justify-center border-2 border-white shadow-sm flex-shrink-0">
+                                                    <span className="text-white text-lg font-semibold">
+                                                        {username[0]?.toUpperCase() || 'U'}
+                                                    </span>
+                                                </div>
+                                            )}
+                                            
+                                            <div className="flex-1 min-w-0">
+                                                <p className="font-semibold text-gray-900 truncate" style={{ color: '#111827' }}>
+                                                    @{username}
+                                                </p>
+                                                <p className="text-sm text-gray-600 truncate" style={{ color: '#4B5563' }}>
+                                                    {displayName}
+                                                </p>
                                             </div>
-                                        )}
-                                        
-                                        <div className="flex-1 min-w-0">
-                                            <p className="font-semibold text-gray-800 truncate">
-                                                @{request.receiver_profile?.username || 'Unknown'}
-                                            </p>
-                                            <p className="text-sm text-gray-500 truncate">
-                                                {request.receiver_profile?.display_name || 'User'}
-                                            </p>
+                                            
+                                            <span className={`text-xs font-medium px-2.5 py-1 rounded-full flex-shrink-0 ${
+                                                request.status === 'pending' 
+                                                    ? 'bg-yellow-100 text-yellow-700' 
+                                                    : request.status === 'accepted'
+                                                    ? 'bg-green-100 text-green-700'
+                                                    : 'bg-gray-100 text-gray-700'
+                                            }`}>
+                                                {request.status}
+                                            </span>
                                         </div>
-                                        
-                                        <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${
-                                            request.status === 'pending' 
-                                                ? 'bg-yellow-100 text-yellow-700' 
-                                                : request.status === 'accepted'
-                                                ? 'bg-green-100 text-green-700'
-                                                : 'bg-gray-100 text-gray-700'
-                                        }`}>
-                                            {request.status}
-                                        </span>
-                                    </div>
-                                ))}
+                                    )
+                                })}
                             </div>
-                        </Card>
+                        </div>
                     ) : (
-                        <Card className="p-8 bg-white/95 backdrop-blur-sm border border-white/30 shadow-lg text-center">
+                        <div className="p-8 bg-white/95 backdrop-blur-sm border border-white/30 shadow-lg rounded-xl text-center">
                             <div className="text-5xl mb-3">📤</div>
                             <h3 className="font-semibold text-lg mb-2 text-gray-800">No sent requests</h3>
                             <p className="text-sm text-gray-600">Send a friend request above to get started!</p>
-                        </Card>
+                        </div>
                     )}
                 </div>
             )}
@@ -233,7 +240,7 @@ export function FriendsPage({ onBack }: FriendsPageProps) {
             {activeTab === 'received' && (
                 <div className="space-y-4">
                     {isLoading ? (
-                        <Card className="p-5 bg-white/95 backdrop-blur-sm border border-white/30 shadow-lg">
+                        <div className="p-5 bg-white/95 backdrop-blur-sm border border-white/30 shadow-lg rounded-xl">
                             <div className="animate-pulse space-y-3">
                                 {[1, 2].map((i) => (
                                     <div key={i} className="flex items-center gap-3">
@@ -249,64 +256,71 @@ export function FriendsPage({ onBack }: FriendsPageProps) {
                                     </div>
                                 ))}
                             </div>
-                        </Card>
+                        </div>
                     ) : receivedRequests.length === 0 ? (
-                        <Card className="p-8 bg-white/95 backdrop-blur-sm border border-white/30 shadow-lg text-center">
+                        <div className="p-8 bg-white/95 backdrop-blur-sm border border-white/30 shadow-lg rounded-xl text-center">
                             <div className="text-5xl mb-3">📬</div>
                             <h3 className="font-semibold text-lg mb-2 text-gray-800">No friend requests</h3>
                             <p className="text-sm text-gray-600">When someone sends you a request, it will appear here!</p>
-                        </Card>
+                        </div>
                     ) : (
-                        <Card className="p-5 bg-white/95 backdrop-blur-sm border border-white/30 shadow-lg">
+                        <div className="p-5 bg-white/95 backdrop-blur-sm border border-white/30 shadow-lg rounded-xl">
                             <h3 className="font-semibold text-lg mb-4 text-gray-800">Friend Requests</h3>
                             <div className="space-y-3">
-                                {receivedRequests.map((request) => (
-                                    <div 
-                                        key={request.id} 
-                                        className="flex items-center gap-3 p-4 bg-white/60 backdrop-blur-sm rounded-xl border border-gray-200/50 hover:bg-white/80 transition-all duration-200"
-                                    >
-                                        {/* Avatar */}
-                                        {request.sender_profile?.profile_pic ? (
-                                            <Image
-                                                src={request.sender_profile.profile_pic}
-                                                alt={request.sender_profile.username || 'User'}
-                                                className="w-14 h-14 rounded-full object-cover border-2 border-white shadow-sm flex-shrink-0"
-                                            />
-                                        ) : (
-                                            <div className="w-14 h-14 rounded-full bg-gradient-to-br from-purple-400 to-purple-600 flex items-center justify-center border-2 border-white shadow-sm flex-shrink-0">
-                                                <span className="text-white text-xl font-semibold">
-                                                    {(request.sender_profile?.username || 'U')[0]?.toUpperCase()}
-                                                </span>
+                                {receivedRequests.map((request) => {
+                                    const senderProfile = request.sender_profile || {}
+                                    const username = senderProfile.username || 'Unknown'
+                                    const displayName = senderProfile.display_name || username
+                                    const profilePic = senderProfile.profile_pic
+                                    
+                                    return (
+                                        <div 
+                                            key={request.id} 
+                                            className="flex items-center gap-3 p-4 bg-white/60 backdrop-blur-sm rounded-xl border border-gray-200/50 hover:bg-white/80 transition-all duration-200"
+                                        >
+                                            {/* Avatar */}
+                                            {profilePic ? (
+                                                <img
+                                                    src={profilePic}
+                                                    alt={username}
+                                                    className="w-14 h-14 rounded-full object-cover border-2 border-white shadow-sm flex-shrink-0"
+                                                />
+                                            ) : (
+                                                <div className="w-14 h-14 rounded-full bg-gradient-to-br from-purple-400 to-purple-600 flex items-center justify-center border-2 border-white shadow-sm flex-shrink-0">
+                                                    <span className="text-white text-xl font-semibold">
+                                                        {username[0]?.toUpperCase() || 'U'}
+                                                    </span>
+                                                </div>
+                                            )}
+                                            
+                                            <div className="flex-1 min-w-0">
+                                                <p className="font-semibold text-gray-900 truncate" style={{ color: '#111827' }}>
+                                                    @{username}
+                                                </p>
+                                                <p className="text-sm text-gray-600 truncate" style={{ color: '#4B5563' }}>
+                                                    {displayName} wants to be friends
+                                                </p>
                                             </div>
-                                        )}
-                                        
-                                        <div className="flex-1 min-w-0">
-                                            <p className="font-semibold text-gray-800 truncate">
-                                                @{request.sender_profile?.username || 'Unknown'}
-                                            </p>
-                                            <p className="text-sm text-gray-500 truncate">
-                                                {request.sender_profile?.display_name || 'User'} wants to be friends
-                                            </p>
+                                            
+                                            <div className="flex gap-2 flex-shrink-0">
+                                                <Button
+                                                    onClick={() => handleAcceptRequest(request.id)}
+                                                    className="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 active:scale-95 transition-all duration-200 shadow-sm"
+                                                >
+                                                    Accept
+                                                </Button>
+                                                <Button
+                                                    onClick={() => handleDeclineRequest(request.id)}
+                                                    className="px-4 py-2 bg-gray-200 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-300 active:scale-95 transition-all duration-200"
+                                                >
+                                                    Decline
+                                                </Button>
+                                            </div>
                                         </div>
-                                        
-                                        <div className="flex gap-2 flex-shrink-0">
-                                            <Button
-                                                onClick={() => handleAcceptRequest(request.id)}
-                                                className="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 active:scale-95 transition-all duration-200 shadow-sm"
-                                            >
-                                                Accept
-                                            </Button>
-                                            <Button
-                                                onClick={() => handleDeclineRequest(request.id)}
-                                                className="px-4 py-2 bg-gray-200 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-300 active:scale-95 transition-all duration-200"
-                                            >
-                                                Decline
-                                            </Button>
-                                        </div>
-                                    </div>
-                                ))}
+                                    )
+                                })}
                             </div>
-                        </Card>
+                        </div>
                     )}
                 </div>
             )}
@@ -315,7 +329,7 @@ export function FriendsPage({ onBack }: FriendsPageProps) {
             {activeTab === 'friends' && (
                 <div className="space-y-4">
                     {isLoading ? (
-                        <Card className="p-5 bg-white/95 backdrop-blur-sm border border-white/30 shadow-lg">
+                        <div className="p-5 bg-white/95 backdrop-blur-sm border border-white/30 shadow-lg rounded-xl">
                             <div className="animate-pulse space-y-3">
                                 {[1, 2].map((i) => (
                                     <div key={i} className="flex items-center gap-3">
@@ -328,9 +342,9 @@ export function FriendsPage({ onBack }: FriendsPageProps) {
                                     </div>
                                 ))}
                             </div>
-                        </Card>
+                        </div>
                     ) : friends.length === 0 ? (
-                        <Card className="p-8 bg-white/95 backdrop-blur-sm border border-white/30 shadow-lg text-center">
+                        <div className="p-8 bg-white/95 backdrop-blur-sm border border-white/30 shadow-lg rounded-xl text-center">
                             <div className="text-6xl mb-4">👥</div>
                             <h2 className="text-xl font-semibold mb-2 text-gray-800">No friends yet</h2>
                             <p className="text-gray-600 mb-6">Start by sending friend requests to see their style!</p>
@@ -340,52 +354,75 @@ export function FriendsPage({ onBack }: FriendsPageProps) {
                             >
                                 Send Friend Request
                             </Button>
-                        </Card>
+                        </div>
                     ) : (
-                        <Card className="p-5 bg-white/95 backdrop-blur-sm border border-white/30 shadow-lg">
+                        <div className="p-5 bg-white/95 backdrop-blur-sm border border-white/30 shadow-lg rounded-xl">
                             <h3 className="font-semibold text-lg mb-4 text-gray-800">
                                 Your Friends <span className="text-purple-600">({friends.length})</span>
                             </h3>
                             <div className="space-y-3">
-                                {friends.map((friend) => (
-                                    <div 
-                                        key={friend.id} 
-                                        className="flex items-center gap-3 p-4 bg-white/60 backdrop-blur-sm rounded-xl border border-gray-200/50 hover:bg-white/80 transition-all duration-200 group"
-                                    >
-                                        {/* Avatar */}
-                                        {friend.friend_profile.profile_pic ? (
-                                            <Image
-                                                src={friend.friend_profile.profile_pic}
-                                                alt={friend.friend_profile.username}
-                                                className="w-14 h-14 rounded-full object-cover border-2 border-white shadow-sm flex-shrink-0"
-                                            />
-                                        ) : (
-                                            <div className="w-14 h-14 rounded-full bg-gradient-to-br from-purple-400 to-purple-600 flex items-center justify-center border-2 border-white shadow-sm flex-shrink-0">
-                                                <span className="text-white text-xl font-semibold">
-                                                    {friend.friend_profile.username[0]?.toUpperCase()}
-                                                </span>
-                                            </div>
-                                        )}
-                                        
-                                        <div className="flex-1 min-w-0">
-                                            <p className="font-semibold text-gray-800 truncate">
-                                                @{friend.friend_profile.username}
-                                            </p>
-                                            <p className="text-sm text-gray-500 truncate">
-                                                {friend.friend_profile.display_name}
-                                            </p>
-                                        </div>
-                                        
-                                        <Button
-                                            onClick={() => handleRemoveFriend(friend.friend_id)}
-                                            className="px-4 py-2 bg-red-500 text-white text-sm font-medium rounded-lg hover:bg-red-600 active:scale-95 transition-all duration-200 shadow-sm opacity-0 group-hover:opacity-100"
+                                {friends.map((friend) => {
+                                    const friendProfile = friend.friend_profile || {}
+                                    const username = friendProfile.username || 'Unknown'
+                                    const displayName = friendProfile.display_name || username
+                                    const profilePic = friendProfile.profile_pic
+                                    
+                                    return (
+                                        <div 
+                                            key={friend.id} 
+                                            className="flex items-center gap-3 p-4 bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-all duration-200"
                                         >
-                                            Remove
-                                        </Button>
-                                    </div>
-                                ))}
+                                            {/* Avatar */}
+                                            {profilePic ? (
+                                                <img
+                                                    src={profilePic}
+                                                    alt={username}
+                                                    className="w-14 h-14 rounded-full object-cover border-2 border-purple-200 shadow-sm flex-shrink-0"
+                                                />
+                                            ) : (
+                                                <div className="w-14 h-14 rounded-full bg-gradient-to-br from-purple-400 to-purple-600 flex items-center justify-center border-2 border-purple-200 shadow-sm flex-shrink-0">
+                                                    <span className="text-white text-xl font-semibold">
+                                                        {username[0]?.toUpperCase() || '?'}
+                                                    </span>
+                                                </div>
+                                            )}
+                                            
+                                            {/* Name and Display Name */}
+                                            <div className="flex-1 min-w-0 pr-3">
+                                                <p 
+                                                    className="font-semibold truncate text-base mb-0.5" 
+                                                    style={{ 
+                                                        color: '#111827',
+                                                        fontWeight: '600',
+                                                        fontSize: '16px',
+                                                        lineHeight: '1.25'
+                                                    }}
+                                                >
+                                                    @{username}
+                                                </p>
+                                                <p 
+                                                    className="text-sm truncate" 
+                                                    style={{ 
+                                                        color: '#6B7280',
+                                                        fontSize: '14px',
+                                                        lineHeight: '1.25'
+                                                    }}
+                                                >
+                                                    {displayName}
+                                                </p>
+                                            </div>
+                                            
+                                            <button
+                                                onClick={() => handleRemoveFriend(friend.friend_id)}
+                                                className="px-4 py-2 bg-red-500 text-white text-sm font-medium rounded-lg hover:bg-red-600 active:scale-95 transition-all duration-200 shadow-sm flex-shrink-0 whitespace-nowrap"
+                                            >
+                                                Remove
+                                            </button>
+                                        </div>
+                                    )
+                                })}
                             </div>
-                        </Card>
+                        </div>
                     )}
                 </div>
             )}

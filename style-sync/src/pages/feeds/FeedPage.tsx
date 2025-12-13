@@ -5,11 +5,12 @@ import { FriendPokerCard } from '../../components/FriendPokerCard'
 
 interface FeedPageProps {
   onBack: () => void
+  onFriendClick?: (friendCard: FriendCard) => void
 }
 
 type ViewMode = 'grid' | 'list'
 
-export function FeedPage({ onBack }: FeedPageProps) {
+export function FeedPage({ onBack, onFriendClick }: FeedPageProps) {
   const [cards, setCards] = useState<FriendCard[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -45,11 +46,13 @@ export function FeedPage({ onBack }: FeedPageProps) {
     )
   })
 
-  // Handle card click - navigate to friend profile (stub for now)
+  // Handle card click - navigate to friend feed
   const handleCardClick = (card: FriendCard) => {
-    console.log('Navigate to friend profile:', card.userId)
-    // TODO: Navigate to friend profile page when implemented
-    // For now, this is a stub
+    if (onFriendClick) {
+      onFriendClick(card)
+    } else {
+      console.log('Navigate to friend profile:', card.userId)
+    }
   }
 
   return (
@@ -182,11 +185,11 @@ export function FeedPage({ onBack }: FeedPageProps) {
             >
               {viewMode === 'grid' ? (
                 <div className="w-full">
-                  <FriendPokerCard card={card} onClick={() => handleCardClick(card)} />
+                  <FriendPokerCard card={card} onClick={() => handleCardClick(card)} isGrid={true} />
                 </div>
               ) : (
                 <div className="w-full max-w-xs">
-                  <FriendPokerCard card={card} onClick={() => handleCardClick(card)} />
+                  <FriendPokerCard card={card} onClick={() => handleCardClick(card)} isGrid={false} />
                 </div>
               )}
             </div>

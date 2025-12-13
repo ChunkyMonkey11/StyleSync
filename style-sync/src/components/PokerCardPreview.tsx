@@ -83,39 +83,41 @@ export function PokerCardPreview({
 
         {/* Back Side */}
         <div
-          className={`absolute inset-0 w-full h-full rounded-xl border-2 ${suitConfig.border} bg-gradient-to-br ${suitConfig.gradient} shadow-2xl backface-hidden rotate-y-180 p-6 flex flex-col text-white poker-card-text`}
+          className={`absolute inset-0 w-full h-full rounded-xl border-2 ${suitConfig.border} bg-gradient-to-br ${suitConfig.gradient} shadow-2xl backface-hidden rotate-y-180 p-4 flex flex-col text-white poker-card-text overflow-hidden`}
         >
           {/* Header */}
-          <div className="text-center mb-6">
-            <div className="text-2xl font-bold mb-1">Stats</div>
+          <div className="text-center mb-4 flex-shrink-0">
+            <div className="text-xl font-bold mb-1">Stats</div>
             <div className="text-xs opacity-75">Tap to flip back</div>
           </div>
 
-          {/* Content */}
+          {/* Content - Scrollable */}
           {stats && (
-            <div className="flex-1 flex flex-col justify-center space-y-6">
-              {/* Friends Count */}
-              <div className="flex justify-between items-center px-2">
-                <span className="text-base font-semibold opacity-95">Friends</span>
-                <span className="font-bold text-2xl">{stats.friends_count}</span>
-              </div>
-              
-              {/* Interests */}
-              {stats.interests && stats.interests.length > 0 && (
-                <div>
-                  <div className="text-base font-semibold mb-3 opacity-90 px-2">Interests</div>
-                  <div className="flex flex-wrap gap-2 justify-center px-2">
-                    {stats.interests.map((interest, index) => (
-                      <span
-                        key={index}
-                        className="px-3 py-1.5 bg-white/25 backdrop-blur-sm text-white text-xs font-medium rounded-full border border-white/30"
-                      >
-                        {interest}
-                      </span>
-                    ))}
-                  </div>
+            <div className="flex-1 flex flex-col min-h-0 overflow-y-auto">
+              <div className="space-y-4">
+                {/* Friends Count */}
+                <div className="flex justify-between items-center px-2">
+                  <span className="text-base font-semibold opacity-95">Friends</span>
+                  <span className="font-bold text-2xl">{stats.friends_count}</span>
                 </div>
-              )}
+                
+                {/* Interests */}
+                {stats.interests && stats.interests.length > 0 && (
+                  <div className="flex-shrink-0">
+                    <div className="text-base font-semibold mb-2 opacity-90 px-2">Interests</div>
+                    <div className="flex flex-wrap gap-2 justify-center px-2 max-h-[140px] overflow-y-auto">
+                      {stats.interests.map((interest, index) => (
+                        <span
+                          key={index}
+                          className="px-2.5 py-1 bg-white/25 backdrop-blur-sm text-white text-xs font-medium rounded-full border border-white/30"
+                        >
+                          {interest}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </div>

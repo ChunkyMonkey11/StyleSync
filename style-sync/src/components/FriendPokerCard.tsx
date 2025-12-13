@@ -4,11 +4,15 @@ import { SUIT_ICONS, SUIT_COLORS } from '../types/card'
 interface FriendPokerCardProps {
   card: FriendCard
   onClick: () => void
+  isGrid?: boolean
 }
 
-export function FriendPokerCard({ card, onClick }: FriendPokerCardProps) {
+export function FriendPokerCard({ card, onClick, isGrid = false }: FriendPokerCardProps) {
   const suitConfig = SUIT_COLORS[card.suit]
   const suitIcon = SUIT_ICONS[card.suit]
+  const cornerSize = isGrid ? 'text-xl' : 'text-3xl'
+  const cornerPosition = isGrid ? 'top-2 left-2' : 'top-6 left-6'
+  const cornerPositionBottom = isGrid ? 'bottom-2 right-2' : 'bottom-6 right-6'
 
   return (
     <div className="perspective-1000 w-full max-w-xs mx-auto">
@@ -26,9 +30,9 @@ export function FriendPokerCard({ card, onClick }: FriendPokerCardProps) {
         aria-label={`View ${card.username}'s profile`}
       >
         {/* Rank + Suit (Top Left) */}
-        <div className="text-white text-3xl font-bold absolute top-4 left-4">
+        <div className={`text-white ${cornerSize} font-bold absolute ${cornerPosition}`}>
           {card.rank}
-          <span className="ml-1">{suitIcon}</span>
+          <span className="ml-0.5">{suitIcon}</span>
         </div>
 
         {/* Center Avatar with Username and Display Name */}
@@ -56,9 +60,9 @@ export function FriendPokerCard({ card, onClick }: FriendPokerCardProps) {
         </div>
 
         {/* Rank + Suit (Bottom Right - Rotated) */}
-        <div className="absolute bottom-4 right-4 text-white text-3xl font-bold transform rotate-180">
+        <div className={`absolute ${cornerPositionBottom} text-white ${cornerSize} font-bold transform rotate-180`}>
           {card.rank}
-          <span className="ml-1">{suitIcon}</span>
+          <span className="ml-0.5">{suitIcon}</span>
         </div>
       </div>
 

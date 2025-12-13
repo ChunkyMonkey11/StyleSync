@@ -107,10 +107,22 @@ export function useFriendRequests(): UseFriendRequestsReturn {
       const deduplicatedReceivedRequests = deduplicateRequests(receivedRequestsData.requests || [])
       const deduplicatedFriends = deduplicateFriends(friendsData.friends || [])
       
+      // Debug logging
+      console.log('[useFriendRequests] Raw received requests:', {
+        raw: receivedRequestsData.requests,
+        deduplicated: deduplicatedReceivedRequests,
+        allStatuses: deduplicatedReceivedRequests.map(r => ({ id: r.id, status: r.status }))
+      })
+      
       // Filter received requests to only show pending ones (accepted/declined should not appear)
       const pendingReceivedRequests = deduplicatedReceivedRequests.filter(
         req => req.status === 'pending'
       )
+      
+      console.log('[useFriendRequests] Filtered pending requests:', {
+        pendingCount: pendingReceivedRequests.length,
+        pendingRequests: pendingReceivedRequests.map(r => ({ id: r.id, status: r.status }))
+      })
       
       // Filter sent requests - show all statuses so user can see if their request was accepted/declined
       setSentRequests(deduplicatedSentRequests)

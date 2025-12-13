@@ -84,6 +84,8 @@ export interface FriendCard {
   username: string
   displayName?: string
   avatarUrl?: string | null
+  bio?: string
+  interests?: string[]
   rank: CardRank
   suit: CardSuit
   stats?: {
