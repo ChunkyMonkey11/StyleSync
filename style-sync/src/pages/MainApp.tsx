@@ -144,7 +144,7 @@ export function MainApp() {
     const { getValidToken } = useAuth()
     
     /** Friends hook - provides friends list and count */
-    const { friends } = useFriendRequests()
+    useFriendRequests()
 
     // ============================================
     // STATE MANAGEMENT
@@ -273,10 +273,6 @@ export function MainApp() {
         return null
     }
     
-    /**
-     * Gets friends count for quick stats.
-     */
-    const friendsCount = friends.length
 
     // ============================================
     // CONDITIONAL VIEW RENDERING
@@ -408,8 +404,8 @@ export function MainApp() {
     
     return (
         <div className="min-h-screen p-4 max-w-md mx-auto">
-            {/* Premium Logo Header with Welcome Message */}
-            <LogoHeader welcomeMessage={`Welcome back, ${currentUser?.displayName || 'User'}!`} />
+            {/* Premium Logo Header */}
+            <LogoHeader />
 
             {/* Hero Profile Section */}
             <div className="mb-8">
@@ -459,15 +455,6 @@ export function MainApp() {
                             @{profile.username}
                         </h2>
                     )}
-                    
-                    {/* Quick Stats */}
-                    <div className="text-white text-sm font-medium">
-                        {friendsCount === 0 ? (
-                            <span>No friends yet</span>
-                        ) : (
-                            <span>{friendsCount} {friendsCount === 1 ? 'Friend' : 'Friends'}</span>
-                        )}
-                    </div>
                 </div>
             </div>
 
