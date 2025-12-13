@@ -102,7 +102,7 @@ import { DeckGuidePage } from './deck/DeckGuidePage'
 import { useAuth } from '../hooks/useAuth'
 import { useFriendRequests } from '../hooks/useFriendRequests'
 import pencilIcon from '../pencil.png'
-import logoImage from '../logo.png'
+import { LogoHeader } from '../components/LogoHeader'
 
 /**
  * UserProfile interface
@@ -386,16 +386,8 @@ export function MainApp() {
     if (error) {
         return (
             <div className="min-h-screen p-4 max-w-md mx-auto">
-                <div className="text-center mb-10 pt-8">
-                    <div className="flex justify-center mb-8">
-                        <img 
-                            src={logoImage} 
-                            alt="StyleSync" 
-                            className="h-28 w-auto object-contain"
-                        />
-                    </div>
-                    <p className="text-white text-base">Welcome back, {currentUser?.displayName || 'User'}!</p>
-                </div>
+                {/* Premium Logo Header with Welcome Message */}
+                <LogoHeader welcomeMessage={`Welcome back, ${currentUser?.displayName || 'User'}!`} />
                 <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg p-4 text-center">
                     <p className="text-white mb-3">{error}</p>
                     <button 
@@ -417,17 +409,8 @@ export function MainApp() {
     
     return (
         <div className="min-h-screen p-4 max-w-md mx-auto">
-            {/* Page Header */}
-            <div className="text-center mb-10 pt-8">
-                <div className="flex justify-center mb-8">
-                    <img 
-                        src={logoImage} 
-                        alt="StyleSync" 
-                        className="h-28 w-auto object-contain"
-                    />
-                </div>
-                <p className="text-white text-base">Welcome back, {currentUser?.displayName || 'User'}!</p>
-            </div>
+            {/* Premium Logo Header with Welcome Message */}
+            <LogoHeader welcomeMessage={`Welcome back, ${currentUser?.displayName || 'User'}!`} />
 
             {/* Hero Profile Section */}
             <div className="mb-8">
