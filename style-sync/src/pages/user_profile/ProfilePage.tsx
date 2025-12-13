@@ -15,7 +15,6 @@ interface UserProfile {
     profile_pic: string
     bio: string
     interests: string[]
-    style_preferences: string[]
     created_at: string
     updated_at: string
 }

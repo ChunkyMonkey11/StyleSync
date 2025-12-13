@@ -10,7 +10,6 @@ interface UserProfile {
     profile_pic: string
     bio: string
     interests: string[]
-    style_preferences: string[]
     created_at: string
     updated_at: string
 }
@@ -28,7 +27,6 @@ export function ProfileEditPage({ onBack, onSave }: ProfileEditPageProps) {
     // Form state
     const [username, setUsername] = useState('')
     const [bio, setBio] = useState('')
-    const [stylePreferences, setStylePreferences] = useState<string[]>([])
     const [interests, setInterests] = useState<string[]>([])
     const [customInterest, setCustomInterest] = useState('')
     const [activeBubbleIndex, setActiveBubbleIndex] = useState<number | null>(null)
@@ -37,11 +35,6 @@ export function ProfileEditPage({ onBack, onSave }: ProfileEditPageProps) {
     const [isLoading, setIsLoading] = useState(true)
     const [isSaving, setIsSaving] = useState(false)
     const [errors, setErrors] = useState<Record<string, string>>({})
-
-    const styleOptions = [
-        'Casual', 'Formal', 'Streetwear', 'Vintage', 'Minimalist', 
-        'Bohemian', 'Athletic', 'Business', 'Trendy', 'Classic'
-    ]
     
     const interestOptions = [
         'Fashion', 'Streetwear', 'Vintage', 'Luxury', 'Sustainable', 
@@ -77,7 +70,6 @@ export function ProfileEditPage({ onBack, onSave }: ProfileEditPageProps) {
                     const profile = result.profile
                     setUsername(profile.username || '')
                     setBio(profile.bio || '')
-                    setStylePreferences(profile.style_preferences || [])
                     setInterests(profile.interests || [])
                 }
             }
@@ -96,14 +88,6 @@ export function ProfileEditPage({ onBack, onSave }: ProfileEditPageProps) {
         } catch (error) {
             console.error('Error clearing auth cache:', error)
         }
-    }
-
-        const toggleStylePreference = (style: string) => {
-        setStylePreferences(prev => 
-            prev.includes(style) 
-                ? prev.filter(s => s !== style)
-                : [...prev, style]
-        )
     }
     
     const removeInterest = (interestToRemove: string) => {
@@ -159,7 +143,6 @@ export function ProfileEditPage({ onBack, onSave }: ProfileEditPageProps) {
                 display_name: currentUser?.displayName || username,
                 profile_pic: currentUser?.avatarImage?.url || '',
                 bio: bio.trim() || undefined,
-                style_preferences: stylePreferences,
                 interests: interests,
                 updated_at: new Date().toISOString()
             }
@@ -270,27 +253,6 @@ export function ProfileEditPage({ onBack, onSave }: ProfileEditPageProps) {
                             placeholder="Tell us about your style..."
                             className="w-full"
                         />
-                    </div>
-                    
-                    {/* Style Preferences */}
-                    <div className="mb-6">
-                        <label className="block text-sm font-medium mb-3">Style Preferences</label>
-                        <div className="grid grid-cols-2 gap-2">
-                            {styleOptions.map((style) => (
-                                <button
-                                    key={style}
-                                    type="button"
-                                    onClick={() => toggleStylePreference(style)}
-                                    className={`p-2 text-sm rounded-lg border transition-colors ${
-                                        stylePreferences.includes(style)
-                                            ? 'bg-blue-500 text-white border-blue-500'
-                                            : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
-                                    }`}
-                                >
-                                    {style}
-                                </button>
-                            ))}
-                        </div>
                     </div>
                     
                     {/* Interests */}

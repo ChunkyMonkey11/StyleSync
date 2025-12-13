@@ -118,7 +118,6 @@ interface UserProfile {
     profile_pic: string
     bio: string
     interests: string[]
-    style_preferences: string[]
     created_at: string
     updated_at: string
 }
@@ -159,7 +158,7 @@ export function MainApp() {
     
     /**
      * User profile data fetched from backend.
-     * Contains username, bio, interests, style preferences, etc.
+     * Contains username, bio, interests, etc.
      */
     const [profile, setProfile] = useState<UserProfile | null>(null)
     
@@ -473,47 +472,6 @@ export function MainApp() {
             </div>
 
             <div className="space-y-4">
-
-                {/* Style Preferences Card - Displays user's selected style preferences */}
-                <div className="bg-white p-4 rounded-lg border shadow-sm">
-                    <h2 className="font-semibold mb-2">Style Preferences</h2>
-                    <div className="flex flex-wrap gap-2 mt-2">
-                        {profile?.style_preferences && profile.style_preferences.length > 0 ? (
-                            // Display each preference as a blue pill badge
-                            profile.style_preferences.map((preference, index) => (
-                                <span 
-                                    key={index}
-                                    className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded"
-                                >
-                                    {preference}
-                                </span>
-                            ))
-                        ) : (
-                            // Show placeholder if no preferences set
-                            <span className="px-2 py-1 bg-gray-100 text-gray-500 text-xs rounded">
-                                No preferences set
-                            </span>
-                        )}
-                    </div>
-                </div>
-
-                {/* Interests Card - Displays user's interests (only shown if interests exist) */}
-                {profile?.interests && profile.interests.length > 0 && (
-                    <div className="bg-white p-4 rounded-lg border shadow-sm">
-                        <h2 className="font-semibold mb-2">Your Interests</h2>
-                        <div className="flex flex-wrap gap-2 mt-2">
-                            {/* Display each interest as a purple pill badge */}
-                            {profile.interests.map((interest, index) => (
-                                <span 
-                                    key={index}
-                                    className="px-2 py-1 bg-purple-100 text-purple-800 text-xs rounded"
-                                >
-                                    {interest}
-                                </span>
-                            ))}
-                        </div>
-                    </div>
-                )}
 
                 {/* Feeds Card - Quick access to feeds */}
                 <div className="bg-white p-4 rounded-lg border shadow-sm">

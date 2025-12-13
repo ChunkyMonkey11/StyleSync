@@ -11,18 +11,12 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps) {
     const { getValidToken } = useAuth()
     const [username, setUsername] = useState('')
     const [bio, setBio] = useState('')
-    const [stylePreferences, setStylePreferences] = useState<string[]>([])
     const [interests, setInterests] = useState<string[]>([])
     const [gender, setGender] = useState<'MALE' | 'FEMALE' | 'NEUTRAL' | ''>('')
     const [customInterest, setCustomInterest] = useState('')
     const [activeBubbleIndex, setActiveBubbleIndex] = useState<number | null>(null)
     const [errors, setErrors] = useState<Record<string, string>>({})
     const [isSubmitting, setIsSubmitting] = useState(false)
-    
-    const styleOptions = [
-        'Casual', 'Formal', 'Streetwear', 'Vintage', 'Minimalist', 
-        'Bohemian', 'Athletic', 'Business', 'Trendy', 'Classic'
-    ]
     
     const interestOptions = [
         'Fashion', 'Streetwear', 'Vintage', 'Luxury', 'Sustainable', 
@@ -38,16 +32,6 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps) {
         if (!/^[a-z0-9_]+$/.test(value)) return 'Only lowercase letters, numbers, and underscores'
         return null
     }
-    
-    const toggleStylePreference = (style: string) => {
-        setStylePreferences(prev => 
-            prev.includes(style) 
-                ? prev.filter(s => s !== style)
-                : [...prev, style]
-        )
-    }
-    
-    
     
     const removeInterest = (interestToRemove: string) => {
         setInterests(prev => prev.filter(interest => interest !== interestToRemove))
@@ -109,7 +93,6 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps) {
                 display_name: currentUser?.displayName || username,
                 profile_pic: currentUser?.avatarImage?.url || '',
                 bio: bio.trim() || undefined,
-                style_preferences: stylePreferences,
                 interests: interests,
                 gender: gender || undefined,
                 created_at: new Date().toISOString()
@@ -208,27 +191,6 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps) {
                             placeholder="Tell us about your style..."
                             className="w-full"
                         />
-                    </div>
-                    
-                    {/* Style Preferences */}
-                    <div className="mb-6">
-                        <label className="block text-sm font-medium mb-3">Style Preferences</label>
-                        <div className="grid grid-cols-2 gap-2">
-                            {styleOptions.map((style) => (
-                                <button
-                                    key={style}
-                                    type="button"
-                                    onClick={() => toggleStylePreference(style)}
-                                    className={`p-2 text-sm rounded-lg border transition-colors ${
-                                        stylePreferences.includes(style)
-                                            ? 'bg-blue-500 text-white border-blue-500'
-                                            : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
-                                    }`}
-                                >
-                                    {style}
-                                </button>
-                            ))}
-                        </div>
                     </div>
                     
                     {/* Interests */}

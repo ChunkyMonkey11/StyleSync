@@ -16,7 +16,6 @@ interface UserProfile {
   profile_pic?: string
   bio?: string
   interests?: string[]
-  style_preferences?: string[]
   gender?: 'MALE' | 'FEMALE' | 'NEUTRAL'
   created_at: string
   updated_at?: string
@@ -177,7 +176,6 @@ Deno.serve(async (req) => {
         profile_pic: profileData.profile_pic ?? null,
         bio: profileData.bio ?? null,
         interests: profileData.interests ?? [],
-        style_preferences: profileData.style_preferences ?? [],
         gender: profileData.gender ?? null,
         updated_at: profileData.updated_at ?? new Date().toISOString()
       }
