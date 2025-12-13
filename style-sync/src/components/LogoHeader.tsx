@@ -1,9 +1,5 @@
 import logoImage from '../logo.png'
 
-interface LogoHeaderProps {
-  welcomeMessage?: string
-}
-
 /**
  * LogoHeader Component
  * 
@@ -16,26 +12,18 @@ interface LogoHeaderProps {
  * - Purple hue on right, pink hue on left
  * - Bigger size for better presence
  * - Safe area padding for iOS notch
- * - Welcome message positioned directly below logo
  */
-export function LogoHeader({ welcomeMessage }: LogoHeaderProps) {
+export function LogoHeader() {
   return (
     <div className="w-full flex flex-col items-center mb-8 pt-safe pb-4">
       {/* Logo with dual-tone glow - pink on left, purple on right */}
-      <div className="relative mb-3">
+      <div className="relative mb-1">
         <img 
           src={logoImage} 
           alt="StyleSync" 
           className="h-44 w-auto object-contain logo-glow"
         />
       </div>
-
-      {/* Welcome Message - positioned slightly below logo */}
-      {welcomeMessage && (
-        <p className="text-white text-lg font-medium tracking-tight">
-          {welcomeMessage}
-        </p>
-      )}
 
       {/* Dual-tone glow effect - pink left, purple right */}
       <style>{`

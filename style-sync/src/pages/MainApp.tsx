@@ -385,8 +385,8 @@ export function MainApp() {
     if (error) {
         return (
             <div className="min-h-screen p-4 max-w-md mx-auto">
-                {/* Premium Logo Header with Welcome Message */}
-                <LogoHeader welcomeMessage={`Welcome back, ${currentUser?.displayName || 'User'}!`} />
+                {/* Premium Logo Header */}
+                <LogoHeader />
                 <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg p-4 text-center">
                     <p className="text-white mb-3">{error}</p>
                     <button 
