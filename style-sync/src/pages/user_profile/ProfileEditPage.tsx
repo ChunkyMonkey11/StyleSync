@@ -9,8 +9,7 @@ interface ProfileEditPageProps {
 
 export function ProfileEditPage({ onBack, onSave }: ProfileEditPageProps) {
     const { currentUser } = useCurrentUser()
-    const { getValidToken, clearAuth } = useAuth()
-    const isDebugBuild = import.meta.env.MODE !== 'production'
+    const { getValidToken } = useAuth()
     
     // Form state
     const [username, setUsername] = useState('')
@@ -24,6 +23,7 @@ export function ProfileEditPage({ onBack, onSave }: ProfileEditPageProps) {
     const [isLoading, setIsLoading] = useState(true)
     const [isSaving, setIsSaving] = useState(false)
     const [errors, setErrors] = useState<Record<string, string>>({})
+    const [showAllInterests, setShowAllInterests] = useState(false)
     
     const interestOptions = [
         'Fashion', 'Streetwear', 'Vintage', 'Luxury', 'Sustainable', 
@@ -70,16 +70,6 @@ export function ProfileEditPage({ onBack, onSave }: ProfileEditPageProps) {
         }
     }
 
-    // DEBUG ONLY: clears cached auth to force a fresh JWT. Remove before production.
-    const handleDebugClearAuth = async () => {
-        try {
-            await clearAuth()
-            alert('Auth cache cleared. Re-open any screen that requests data to re-authenticate.')
-        } catch (error) {
-            console.error('Error clearing auth cache:', error)
-        }
-    }
-    
     const removeInterest = (interestToRemove: string) => {
         setInterests(prev => prev.filter(interest => interest !== interestToRemove))
     }
@@ -173,8 +163,8 @@ export function ProfileEditPage({ onBack, onSave }: ProfileEditPageProps) {
 
     if (isLoading) {
         return (
-            <div className="min-h-screen  p-4 max-w-md mx-auto">
-                <div className="flex items-center mb-6 pt-4">
+            <div className="min-h-screen bg-gradient-to-br from-purple-600 via-purple-700 to-purple-900 p-4 max-w-md mx-auto">
+                <div className="flex items-center mb-8 pt-4">
                     <button 
                         onClick={onBack}
                         className="mr-3 px-4 py-2.5 rounded-2xl backdrop-blur-xl bg-white/20 border border-white/30 shadow-lg hover:bg-white/30 active:scale-95 transition-all duration-200 text-white font-medium"
@@ -183,201 +173,225 @@ export function ProfileEditPage({ onBack, onSave }: ProfileEditPageProps) {
                     </button>
                     <h1 className="text-2xl font-bold text-white">Edit Profile</h1>
                 </div>
-                <div className="space-y-4">
-                    {[1, 2, 3, 4].map((i) => (
-                        <div key={i} className="bg-white/10 backdrop-blur-sm p-4 rounded-lg border border-white/20 shadow-lg animate-pulse">
-                            <div className="h-4 bg-white/20 rounded mb-2"></div>
-                            <div className="h-3 bg-white/20 rounded w-3/4"></div>
-                        </div>
-                    ))}
+                <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+                    <div className="space-y-8">
+                        {[1, 2, 3, 4].map((i) => (
+                            <div key={i} className="animate-pulse">
+                                <div className="h-4 bg-gray-200 rounded mb-2 w-1/3"></div>
+                                <div className="h-10 bg-gray-200 rounded w-full"></div>
+                            </div>
+                        ))}
+                    </div>
                 </div>
             </div>
         )
     }
 
+    // Cap interests at 7 for better focus
+    const MAX_INTERESTS = 7
+    const canAddMore = interests.length < MAX_INTERESTS
+
     return (
-        <div className="min-h-screen  p-4 max-w-md mx-auto">
-            {/* Header */}
-            <div className="flex items-center mb-6 pt-4">
+        <div className="min-h-screen bg-gradient-to-br from-purple-600 via-purple-700 to-purple-900 p-4 max-w-md mx-auto">
+            {/* Header - Simple and utilitarian */}
+            <div className="flex items-center mb-8 pt-4">
                 <button 
                     onClick={onBack}
                     className="mr-3 px-4 py-2.5 rounded-2xl backdrop-blur-xl bg-white/20 border border-white/30 shadow-lg hover:bg-white/30 active:scale-95 transition-all duration-200 text-white font-medium"
                 >
                     ← Back
                 </button>
-                <h1 className="text-2xl font-bold">Edit Profile</h1>
-                {isDebugBuild && (
-                    <button
-                        type="button"
-                        onClick={handleDebugClearAuth}
-                        className="ml-auto text-xs text-red-500 underline"
-                    >
-                        Clear Auth (Debug)
-                    </button>
-                )}
+                <h1 className="text-2xl font-bold text-white">Edit Profile</h1>
             </div>
 
-            <Card className="p-6">
-                <form onSubmit={handleSubmit}>
-                    {/* Username Input */}
-                    <div className="mb-4">
-                        <label className="block text-sm font-medium mb-1">Username *</label>
-                        <Input
-                            value={username}
-                            readOnly
-                            disabled
-                            placeholder="your_username"
-                            className="w-full"
-                            aria-readonly="true"
-                        />
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+                <form onSubmit={handleSubmit} className="space-y-8">
+                    {/* Username - Read-only display */}
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Username
+                        </label>
+                        <div className="flex items-center gap-2 text-gray-900">
+                            <span className="text-base">@{username}</span>
+                            <span className="text-gray-400">🔒</span>
+                        </div>
                         <p className="text-xs text-gray-500 mt-1">
-                            Usernames are permanent. Contact support if you need to change it.
+                            Usernames are permanent
                         </p>
                     </div>
                     
-                    {/* Bio Input */}
-                    <div className="mb-4">
-                        <label className="block text-sm font-medium mb-1">Bio (optional)</label>
-                        <Input
+                    {/* Bio - More expressive */}
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Bio <span className="text-gray-500 font-normal">(optional)</span>
+                        </label>
+                        <textarea
                             value={bio}
                             onChange={(e) => setBio(e.target.value)}
-                            placeholder="Tell us about your style..."
-                            className="w-full"
+                            placeholder="What's your style, vibe, or obsession?"
+                            rows={3}
+                            className="w-full bg-white border border-gray-300 rounded-lg px-4 py-3 text-gray-900 placeholder-gray-400 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-colors resize-none"
                         />
                     </div>
                     
-                    {/* Interests */}
-                    <div className="mb-6">
-                        <label className="block text-sm font-medium mb-3">Your Interests</label>
+                    {/* Interests - Simplified and focused */}
+                    <div>
+                        <div className="flex items-center justify-between mb-3">
+                            <label className="block text-sm font-medium text-gray-700">
+                                Interests
+                            </label>
+                            {interests.length > 0 && (
+                                <span className="text-xs text-gray-500">
+                                    {interests.length}/{MAX_INTERESTS}
+                                </span>
+                            )}
+                        </div>
                         
-                        {/* Bubble Interface */}
-                        <div className="flex flex-wrap gap-2 mb-4">
-                            {/* Existing Interest Bubbles */}
-                            {interests.map((interest, index) => (
-                                <div
-                                    key={index}
-                                    className="flex items-center gap-1 bg-blue-100 text-blue-800 px-3 py-2 rounded-full text-sm border-2 border-blue-200"
-                                >
-                                    <span>{interest}</span>
+                        {/* Selected Interests - Primary focus */}
+                        {interests.length > 0 && (
+                            <div className="flex flex-wrap gap-2 mb-4">
+                                {interests.map((interest, index) => (
+                                    <div
+                                        key={index}
+                                        className="flex items-center gap-1.5 bg-purple-100 text-purple-700 px-3 py-1.5 rounded-full text-sm font-medium"
+                                    >
+                                        <span>{interest}</span>
+                                        <button
+                                            type="button"
+                                            onClick={() => removeInterest(interest)}
+                                            className="ml-0.5 text-purple-500 hover:text-purple-700 font-medium"
+                                        >
+                                            ×
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                        
+                        {/* Add Custom - Inline button */}
+                        {canAddMore && activeBubbleIndex === null && (
+                            <button
+                                type="button"
+                                onClick={startNewBubble}
+                                className="text-sm text-purple-600 hover:text-purple-700 font-medium mb-4"
+                            >
+                                + Custom
+                            </button>
+                        )}
+                        
+                        {/* Active Custom Input */}
+                        {activeBubbleIndex !== null && (
+                            <div className="mb-4">
+                                <input
+                                    type="text"
+                                    value={customInterest}
+                                    onChange={(e) => setCustomInterest(e.target.value)}
+                                    onKeyDown={handleBubbleKeyPress}
+                                    onBlur={handleBubbleBlur}
+                                    placeholder="Type and press Enter..."
+                                    className="w-full bg-white border border-purple-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500"
+                                    autoFocus
+                                />
+                            </div>
+                        )}
+                        
+                        {/* Quick Add - Progressive disclosure */}
+                        {canAddMore && (
+                            <div>
+                                <p className="text-xs text-gray-600 mb-3">Quick add</p>
+                                <div className="grid grid-cols-3 gap-2">
+                                    {(showAllInterests ? interestOptions : interestOptions.slice(0, 9)).map((interest) => {
+                                        const isSelected = interests.includes(interest)
+                                        
+                                        return (
+                                            <button
+                                                key={interest}
+                                                type="button"
+                                                onClick={() => addQuickInterest(interest)}
+                                                disabled={isSelected || !canAddMore}
+                                                className={`
+                                                    p-2.5 text-xs rounded-lg border transition-colors
+                                                    ${isSelected 
+                                                        ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed' 
+                                                        : 'bg-white text-gray-700 border-gray-200 hover:border-purple-500 hover:text-purple-700'
+                                                    }
+                                                `}
+                                            >
+                                                {interest}
+                                            </button>
+                                        )
+                                    })}
+                                </div>
+                                {interestOptions.length > 9 && (
                                     <button
                                         type="button"
-                                        onClick={() => removeInterest(interest)}
-                                        className="text-blue-600 hover:text-blue-800 ml-1 font-bold"
+                                        onClick={() => setShowAllInterests(!showAllInterests)}
+                                        disabled={!canAddMore}
+                                        className="mt-3 text-sm text-purple-600 hover:text-purple-700 font-medium transition-colors disabled:text-gray-400 disabled:cursor-not-allowed"
                                     >
-                                        ×
+                                        {showAllInterests 
+                                            ? 'Show less' 
+                                            : `+ ${interestOptions.length - 9} more`
+                                        }
                                     </button>
-                                </div>
-                            ))}
-                            
-                            {/* Active Input Bubble */}
-                            {activeBubbleIndex !== null && (
-                                <div className="bg-blue-50 border-2 border-blue-300 border-dashed px-3 py-2 rounded-full text-sm">
-                                    <input
-                                        type="text"
-                                        value={customInterest}
-                                        onChange={(e) => setCustomInterest(e.target.value)}
-                                        onKeyDown={handleBubbleKeyPress}
-                                        onBlur={handleBubbleBlur}
-                                        placeholder="Type interest..."
-                                        className="bg-transparent border-none outline-none text-blue-800 placeholder-blue-400 w-32"
-                                        autoFocus
-                                    />
-                                </div>
-                            )}
-                            
-                            {/* Add New Bubble Button */}
-                            {activeBubbleIndex === null && (
-                                <button
-                                    type="button"
-                                    onClick={startNewBubble}
-                                    className="bg-gray-100 border-2 border-dashed border-gray-300 text-gray-500 px-3 py-2 rounded-full text-sm hover:bg-gray-200 hover:border-gray-400 transition-colors"
-                                >
-                                    + Add Interest
-                                </button>
-                            )}
-                        </div>
-                        
-                        {/* Simple Quick Add Grid */}
-                        <div>
-                            <p className="text-sm text-gray-600 mb-4">Quick add:</p>
-                            <div className="grid grid-cols-3 gap-3">
-                                {interestOptions.map((interest) => {
-                                    const isSelected = interests.includes(interest)
-                                    
-                                    return (
-                                        <button
-                                            key={interest}
-                                            type="button"
-                                            onClick={() => addQuickInterest(interest)}
-                                            disabled={isSelected}
-                                            className={`
-                                                p-3 text-sm rounded-lg border transition-all duration-300 ease-out
-                                                hover:scale-105 hover:shadow-lg
-                                                active:scale-95
-                                                ${isSelected 
-                                                    ? 'bg-gray-200 text-gray-400 border-gray-300 cursor-not-allowed' 
-                                                    : 'bg-white text-gray-700 border-gray-300 hover:border-purple-300 hover:bg-purple-50 hover:text-purple-700 shadow-md hover:shadow-lg cursor-pointer'
-                                                }
-                                            `}
-                                        >
-                                            {interest}
-                                        </button>
-                                    )
-                                })}
+                                )}
                             </div>
-                        </div>
+                        )}
+                        
+                        {!canAddMore && (
+                            <p className="text-xs text-gray-500">
+                                Maximum {MAX_INTERESTS} interests. Remove one to add another.
+                            </p>
+                        )}
                     </div>
 
-                    {/* Public/Private Profile Toggle */}
-                    <div className="mb-6">
-                        <label className="block text-sm font-medium mb-3">Profile Visibility</label>
-                        <div className="bg-white/95 backdrop-blur-sm border border-gray-200 rounded-lg p-4">
-                            <div className="flex items-center justify-between mb-2">
-                                <div>
-                                    <p className="font-medium text-gray-800">Public Profile</p>
-                                    <p className="text-xs text-gray-600 mt-1">
-                                        {isPublic 
-                                            ? 'Discoverable in Public Profiles tab. Friend requests auto-accept.'
-                                            : 'Only discoverable via username search. Friend requests require approval.'
-                                        }
-                                    </p>
-                                </div>
-                                <button
-                                    type="button"
-                                    onClick={() => setIsPublic(!isPublic)}
-                                    className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 ${
-                                        isPublic ? 'bg-purple-600' : 'bg-gray-300'
-                                    }`}
-                                    role="switch"
-                                    aria-checked={isPublic}
-                                >
-                                    <span
-                                        className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                                            isPublic ? 'translate-x-5' : 'translate-x-0'
-                                        }`}
-                                    />
-                                </button>
+                    {/* Profile Visibility - Simplified */}
+                    <div className="pt-6 border-t border-gray-200">
+                        <div className="flex items-center justify-between">
+                            <div className="flex-1">
+                                <p className="text-sm font-medium text-gray-700 mb-1">Public Profile</p>
+                                <p className="text-xs text-gray-500">
+                                    {isPublic 
+                                        ? 'People can find and follow you'
+                                        : 'Only discoverable via username search'
+                                    }
+                                </p>
                             </div>
+                            <button
+                                type="button"
+                                onClick={() => setIsPublic(!isPublic)}
+                                className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 ${
+                                    isPublic ? 'bg-purple-600' : 'bg-gray-300'
+                                }`}
+                                role="switch"
+                                aria-checked={isPublic}
+                            >
+                                <span
+                                    className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                                        isPublic ? 'translate-x-5' : 'translate-x-0'
+                                    }`}
+                                />
+                            </button>
                         </div>
                     </div>
                     
                     {/* Error Display */}
                     {errors.general && (
-                        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded text-red-700 text-sm">
+                        <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
                             {errors.general}
                         </div>
                     )}
                     
-                    {/* Submit Button */}
-                    <Button 
-                        type="submit" 
-                        className="w-full"
+                    {/* Submit Button - Primary action only */}
+                    <button
+                        type="submit"
                         disabled={isSaving}
+                        className="w-full bg-purple-600 hover:bg-purple-700 text-white font-medium py-3 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         {isSaving ? 'Saving...' : 'Save Changes'}
-                    </Button>
+                    </button>
                 </form>
-            </Card>
+            </div>
         </div>
     )
 }

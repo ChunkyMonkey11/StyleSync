@@ -18,6 +18,10 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps) {
     const [errors, setErrors] = useState<Record<string, string>>({})
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [isPublic, setIsPublic] = useState(true)
+    const [showAllInterests, setShowAllInterests] = useState(false)
+    
+    const MAX_INTERESTS = 7
+    const canAddMore = interests.length < MAX_INTERESTS
     
     const interestOptions = [
         'Fashion', 'Streetwear', 'Vintage', 'Luxury', 'Sustainable', 
@@ -67,7 +71,7 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps) {
     }
     
     const addQuickInterest = (interest: string) => {
-        if (!interests.includes(interest)) {
+        if (!interests.includes(interest) && interests.length < MAX_INTERESTS) {
             setInterests(prev => [...prev, interest])
         }
     }
@@ -136,160 +140,208 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps) {
     
     if (loading) {
         return (
-            <div className="min-h-screen flex items-center justify-center p-4">
-                <p className="text-lg text-white">Loading user data...</p>
+            <div className="min-h-screen bg-gradient-to-br from-purple-600 via-purple-700 to-purple-900 flex items-center justify-center p-4">
+                <div className="text-center">
+                    <h1 className="text-2xl font-semibold text-white mb-2">StyleSync</h1>
+                    <p className="text-white/80">Loading your profile...</p>
+                </div>
             </div>
         )
     }
     
     return (
-        <div className="min-h-screen  p-4 max-w-md mx-auto">
-            <Card className="p-6">
-                <form onSubmit={handleSubmit}>
-                    {/* Header */}
-                    <div className="text-center mb-6">
-                        <h1 className="text-2xl font-bold mb-2 text-white">Welcome to Style$ync</h1>
-                        <p className="text-white/80">Let's set up your style profile</p>
+        <div className="min-h-screen bg-gradient-to-br from-purple-600 via-purple-700 to-purple-900 p-4 max-w-md mx-auto">
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 mt-8">
+                <form onSubmit={handleSubmit} className="space-y-8">
+                    {/* Header - Friendly and welcoming */}
+                    <div className="text-center mb-8">
+                        <h1 className="text-2xl font-semibold text-gray-900 mb-2">Welcome to StyleSync</h1>
+                        <p className="text-gray-600 text-sm">Let's set up your profile</p>
                     </div>
                     
-                    {/* User Info Display */}
-                    <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+                    {/* User Info Display - Simple */}
+                    <div className="mb-6 p-4 bg-gray-50 rounded-xl border border-gray-200">
                         <div className="flex items-center space-x-3">
-                            {currentUser?.avatarImage?.url && (
+                            {currentUser?.avatarImage?.url ? (
                                 <Image 
                                     src={currentUser.avatarImage.url} 
                                     alt="Profile" 
                                     className="w-12 h-12 rounded-full"
                                 />
+                            ) : (
+                                <div className="w-12 h-12 rounded-full bg-purple-500 flex items-center justify-center">
+                                    <span className="text-white text-lg font-bold">
+                                        {(currentUser?.displayName || 'U')[0]?.toUpperCase()}
+                                    </span>
+                                </div>
                             )}
                             <div>
-                                <p className="font-medium">{currentUser?.displayName || 'User'}</p>
-                                <p className="text-sm text-gray-500">Connected via Shop</p>
+                                <p className="font-medium text-gray-900">{currentUser?.displayName || 'User'}</p>
+                                <p className="text-xs text-gray-500">Connected via Shop</p>
                             </div>
                         </div>
                     </div>
                     
                     {/* Username Input */}
-                    <div className="mb-4">
-                        <label className="block text-sm font-medium mb-1">Username *</label>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Username <span className="text-red-500">*</span>
+                        </label>
                         <Input
                             value={username}
                             onChange={(e) => setUsername(e.target.value)}
                             placeholder="your_username"
-                            className="w-full"
+                            className={`w-full bg-white border rounded-lg px-4 py-3 text-gray-900 focus:outline-none focus:ring-1 transition-colors ${
+                                errors.username ? 'border-red-300 focus:border-red-400 focus:ring-red-200' : 'border-gray-300 focus:border-purple-500 focus:ring-purple-200'
+                            }`}
                             aria-invalid={!!errors.username}
                         />
                         {errors.username && (
                             <p className="text-sm text-red-600 mt-1">{errors.username}</p>
                         )}
+                        <p className="text-xs text-gray-500 mt-1">Lowercase letters, numbers, and underscores only</p>
                     </div>
                     
                     {/* Bio Input */}
-                    <div className="mb-4">
-                        <label className="block text-sm font-medium mb-1">Bio (optional)</label>
-                        <Input
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Bio <span className="text-gray-500 font-normal">(optional)</span>
+                        </label>
+                        <textarea
                             value={bio}
                             onChange={(e) => setBio(e.target.value)}
-                            placeholder="Tell us about your style..."
-                            className="w-full"
+                            placeholder="What's your style, vibe, or obsession?"
+                            rows={3}
+                            className="w-full bg-white border border-gray-300 rounded-lg px-4 py-3 text-gray-900 placeholder-gray-400 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-200 transition-colors resize-none"
                         />
                     </div>
                     
                     {/* Interests */}
-                    <div className="mb-6">
-                        <label className="block text-sm font-medium mb-3">Your Interests</label>
+                    <div>
+                        <div className="flex items-center justify-between mb-3">
+                            <label className="block text-sm font-medium text-gray-700">
+                                Interests
+                            </label>
+                            {interests.length > 0 && (
+                                <span className="text-xs text-gray-500">
+                                    {interests.length}/{MAX_INTERESTS}
+                                </span>
+                            )}
+                        </div>
                         
-                        {/* Bubble Interface */}
-                        <div className="flex flex-wrap gap-2 mb-4">
-                            {/* Existing Interest Bubbles */}
-                            {interests.map((interest, index) => (
-                                <div
-                                    key={index}
-                                    className="flex items-center gap-1 bg-blue-100 text-blue-800 px-3 py-2 rounded-full text-sm border-2 border-blue-200"
-                                >
-                                    <span>{interest}</span>
+                        {/* Selected Interests */}
+                        {interests.length > 0 && (
+                            <div className="flex flex-wrap gap-2 mb-4">
+                                {interests.map((interest, index) => (
+                                    <div
+                                        key={index}
+                                        className="flex items-center gap-1.5 bg-purple-100 text-purple-700 px-3 py-1.5 rounded-full text-sm font-medium"
+                                    >
+                                        <span>{interest}</span>
+                                        <button
+                                            type="button"
+                                            onClick={() => removeInterest(interest)}
+                                            className="ml-0.5 text-purple-500 hover:text-purple-700 font-medium"
+                                        >
+                                            ×
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                        
+                        {/* Add Custom - Simple inline */}
+                        {canAddMore && activeBubbleIndex === null && (
+                            <button
+                                type="button"
+                                onClick={startNewBubble}
+                                className="text-sm text-purple-600 hover:text-purple-700 font-medium mb-4"
+                            >
+                                + Custom
+                            </button>
+                        )}
+                        
+                        {/* Active Custom Input */}
+                        {activeBubbleIndex !== null && (
+                            <div className="mb-4">
+                                <input
+                                    type="text"
+                                    value={customInterest}
+                                    onChange={(e) => setCustomInterest(e.target.value)}
+                                    onKeyDown={handleBubbleKeyPress}
+                                    onBlur={handleBubbleBlur}
+                                    placeholder="Type and press Enter..."
+                                    className="w-full bg-white border border-purple-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-200"
+                                    autoFocus
+                                />
+                            </div>
+                        )}
+                        
+                        {/* Quick Add - Show fewer initially */}
+                        {canAddMore && (
+                            <div>
+                                <p className="text-xs text-gray-600 mb-3">Quick add</p>
+                                <div className="grid grid-cols-3 gap-2">
+                                    {(showAllInterests ? interestOptions : interestOptions.slice(0, 9)).map((interest) => {
+                                        const isSelected = interests.includes(interest)
+                                        
+                                        return (
+                                            <button
+                                                key={interest}
+                                                type="button"
+                                                onClick={() => addQuickInterest(interest)}
+                                                disabled={isSelected || !canAddMore}
+                                                className={`
+                                                    p-2.5 text-xs rounded-lg border transition-colors
+                                                    ${isSelected 
+                                                        ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed' 
+                                                        : 'bg-white text-gray-700 border-gray-200 hover:border-purple-500 hover:text-purple-700'
+                                                    }
+                                                `}
+                                            >
+                                                {interest}
+                                            </button>
+                                        )
+                                    })}
+                                </div>
+                                {interestOptions.length > 9 && (
                                     <button
                                         type="button"
-                                        onClick={() => removeInterest(interest)}
-                                        className="text-blue-600 hover:text-blue-800 ml-1 font-bold"
+                                        onClick={() => setShowAllInterests(!showAllInterests)}
+                                        disabled={!canAddMore}
+                                        className="mt-3 text-sm text-purple-600 hover:text-purple-700 font-medium transition-colors disabled:text-gray-400 disabled:cursor-not-allowed"
                                     >
-                                        ×
+                                        {showAllInterests 
+                                            ? 'Show less' 
+                                            : `+ ${interestOptions.length - 9} more`
+                                        }
                                     </button>
-                                </div>
-                            ))}
-                            
-                            {/* Active Input Bubble */}
-                            {activeBubbleIndex !== null && (
-                                <div className="bg-blue-50 border-2 border-blue-300 border-dashed px-3 py-2 rounded-full text-sm">
-                                    <input
-                                        type="text"
-                                        value={customInterest}
-                                        onChange={(e) => setCustomInterest(e.target.value)}
-                                        onKeyDown={handleBubbleKeyPress}
-                                        onBlur={handleBubbleBlur}
-                                        placeholder="Type interest..."
-                                        className="bg-transparent border-none outline-none text-blue-800 placeholder-blue-400 w-32"
-                                        autoFocus
-                                    />
-                                </div>
-                            )}
-                            
-                            {/* Add New Bubble Button */}
-                            {activeBubbleIndex === null && (
-                                <button
-                                    type="button"
-                                    onClick={startNewBubble}
-                                    className="bg-gray-100 border-2 border-dashed border-gray-300 text-gray-500 px-3 py-2 rounded-full text-sm hover:bg-gray-200 hover:border-gray-400 transition-colors"
-                                >
-                                    + Add Interest
-                                </button>
-                            )}
-                        </div>
-                        
-                        {/* Simple Quick Add Grid */}
-                        <div>
-                            <p className="text-sm text-gray-600 mb-4">Quick add:</p>
-                            <div className="grid grid-cols-3 gap-3">
-                                {interestOptions.map((interest) => {
-                                    const isSelected = interests.includes(interest)
-                                    
-                                    return (
-                                        <button
-                                            key={interest}
-                                            type="button"
-                                            onClick={() => addQuickInterest(interest)}
-                                            disabled={isSelected}
-                                            className={`
-                                                p-3 text-sm rounded-lg border transition-all duration-300 ease-out
-                                                hover:scale-105 hover:shadow-lg
-                                                active:scale-95
-                                                ${isSelected 
-                                                    ? 'bg-gray-200 text-gray-400 border-gray-300 cursor-not-allowed' 
-                                                    : 'bg-white text-gray-700 border-gray-300 hover:border-purple-300 hover:bg-purple-50 hover:text-purple-700 shadow-md hover:shadow-lg cursor-pointer'
-                                                }
-                                            `}
-                                        >
-                                            {interest}
-                                        </button>
-                                    )
-                                })}
+                                )}
                             </div>
-                        </div>
+                        )}
+                        
+                        {!canAddMore && (
+                            <p className="text-xs text-gray-500">
+                                Maximum {MAX_INTERESTS} interests. Remove one to add another.
+                            </p>
+                        )}
                     </div>
 
-                    {/* Gender */}
-                    <div className="mb-6">
-                        <label className="block text-sm font-medium mb-3">Gender (optional)</label>
+                    {/* Gender - Optional, simple */}
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-3">
+                            Gender <span className="text-gray-500 font-normal">(optional)</span>
+                        </label>
                         <div className="grid grid-cols-3 gap-2">
                             {(['MALE','FEMALE','NEUTRAL'] as const).map(g => (
                                 <button
                                     key={g}
                                     type="button"
                                     onClick={() => setGender(g)}
-                                    className={`p-2 text-sm rounded-lg border transition-colors ${
+                                    className={`p-2.5 text-sm rounded-lg border transition-colors ${
                                         gender === g
                                             ? 'bg-purple-600 text-white border-purple-600'
-                                            : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                                            : 'bg-white text-gray-700 border-gray-200 hover:border-purple-300'
                                     }`}
                                 >
                                     {g === 'MALE' ? 'Male' : g === 'FEMALE' ? 'Female' : 'Non-binary'}
@@ -298,115 +350,53 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps) {
                         </div>
                     </div>
 
-                    {/* Public/Private Profile Toggle */}
-                    <div className="mb-6">
-                        <label className="block text-sm font-medium mb-3">Profile Visibility</label>
-                        <div className="bg-white/95 backdrop-blur-sm border border-gray-200 rounded-lg p-4">
-                            <div className="flex items-center justify-between mb-2">
-                                <div>
-                                    <p className="font-medium text-gray-800">Public Profile</p>
-                                    <p className="text-xs text-gray-600 mt-1">
-                                        {isPublic 
-                                            ? 'Discoverable in Public Profiles tab. Friend requests auto-accept.'
-                                            : 'Only discoverable via username search. Friend requests require approval.'
-                                        }
-                                    </p>
-                                </div>
-                                <button
-                                    type="button"
-                                    onClick={() => setIsPublic(!isPublic)}
-                                    className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 ${
-                                        isPublic ? 'bg-purple-600' : 'bg-gray-300'
-                                    }`}
-                                    role="switch"
-                                    aria-checked={isPublic}
-                                >
-                                    <span
-                                        className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                                            isPublic ? 'translate-x-5' : 'translate-x-0'
-                                        }`}
-                                    />
-                                </button>
+                    {/* Profile Visibility - Simplified */}
+                    <div className="pt-6 border-t border-gray-200">
+                        <div className="flex items-center justify-between">
+                            <div className="flex-1">
+                                <p className="text-sm font-medium text-gray-700 mb-1">Public Profile</p>
+                                <p className="text-xs text-gray-500">
+                                    {isPublic 
+                                        ? 'People can find and follow you'
+                                        : 'Only discoverable via username search'
+                                    }
+                                </p>
                             </div>
+                            <button
+                                type="button"
+                                onClick={() => setIsPublic(!isPublic)}
+                                className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 ${
+                                    isPublic ? 'bg-purple-600' : 'bg-gray-300'
+                                }`}
+                                role="switch"
+                                aria-checked={isPublic}
+                            >
+                                <span
+                                    className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                                        isPublic ? 'translate-x-5' : 'translate-x-0'
+                                    }`}
+                                />
+                            </button>
                         </div>
                     </div>
                     
                     {/* Error Display */}
                     {errors.general && (
-                        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded text-red-700 text-sm">
+                        <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
                             {errors.general}
                         </div>
                     )}
                     
                     {/* Submit Button */}
-                    <Button 
-                        type="submit" 
-                        className="w-full"
+                    <button
+                        type="submit"
                         disabled={isSubmitting}
+                        className="w-full bg-purple-600 hover:bg-purple-700 text-white font-medium py-3 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         {isSubmitting ? 'Creating Profile...' : 'Complete Setup'}
-                    </Button>
+                    </button>
                 </form>
-            </Card>
-            
-            {/* Custom CSS Animations */}
-            <style dangerouslySetInnerHTML={{
-                __html: `
-                    @keyframes waterfall {
-                        0% {
-                            transform: translateY(0%) scale(0.9);
-                            opacity: 0;
-                        }
-                        10% {
-                            opacity: 1;
-                        }
-                        90% {
-                            opacity: 1;
-                        }
-                        100% {
-                            transform: translateY(-200%) scale(0.9);
-                            opacity: 0;
-                        }
-                    }
-                    
-                    @keyframes drift {
-                        0%, 100% { transform: translateX(0px); }
-                        25% { transform: translateX(-8px); }
-                        50% { transform: translateX(6px); }
-                        75% { transform: translateX(-4px); }
-                    }
-                    
-                    @keyframes float {
-                        0%, 100% { transform: translateY(0px) rotate(0deg); }
-                        25% { transform: translateY(-8px) rotate(1deg); }
-                        50% { transform: translateY(-4px) rotate(-1deg); }
-                        75% { transform: translateY(-12px) rotate(0.5deg); }
-                    }
-                    
-                    @keyframes bubblePop {
-                        0% { transform: scale(1) rotate(0deg); }
-                        50% { transform: scale(1.3) rotate(180deg); }
-                        100% { transform: scale(1) rotate(360deg); }
-                    }
-                    
-                    .animate-waterfall {
-                        animation: waterfall 6s linear infinite;
-                    }
-                    
-                    .animate-float {
-                        animation: float 6s ease-in-out infinite;
-                    }
-                    
-                    .animate-bubble-pop {
-                        animation: bubblePop 0.6s ease-out;
-                    }
-                    
-                    .bubble-hover:hover {
-                        animation-play-state: paused;
-                        transform: translateY(-4px) scale(1.05);
-                    }
-                `
-            }} />
+            </div>
         </div>
     )
 }
