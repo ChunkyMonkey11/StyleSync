@@ -126,17 +126,21 @@ Deno.serve(async (req) => {
     }
     
     // ============================================
-    // STEP 7: GET RECEIVER USER BY USERNAME
+    // STEP 7: GET RECEIVER USER BY USERNAME (INCLUDING IS_PUBLIC)
     // ============================================
     const { data: receiverUser, error: receiverUserError } = await supabase
       .from('userprofiles')
-      .select('id')
+      .select('id, is_public')
       .eq('username', receiverUsername)
       .single()
     
     if (receiverUserError || !receiverUser) {
       return errorResponse('User not found', 404)
     }
+    
+    // Get the is_public status (default to false if null/undefined)
+    const isReceiverPublic = receiverUser.is_public === true
+    console.log(`[send-friend-request] Receiver ${receiverUsername} (id: ${receiverUser.id}) is_public: ${receiverUser.is_public}, will auto-accept: ${isReceiverPublic}`)
     
     // ============================================
     // STEP 8: VALIDATE REQUEST
@@ -165,7 +169,8 @@ Deno.serve(async (req) => {
       if (existingRequest.status === 'pending') {
         return errorResponse('Friend request already sent', 409)
       } else if (existingRequest.status === 'accepted') {
-        return errorResponse('You are already friends', 409)
+        // If already accepted (one-way follow), don't allow resending
+        return errorResponse('You are already following this user', 409)
       } else if (existingRequest.status === 'declined') {
         // Allow resending after decline
         // Will update the existing request below
@@ -175,16 +180,19 @@ Deno.serve(async (req) => {
     // ============================================
     // STEP 10: CREATE OR UPDATE FRIEND REQUEST
     // ============================================
+    // Auto-accept if receiver has a public profile, otherwise set to pending
+    const requestStatus = isReceiverPublic ? 'accepted' : 'pending'
+    
     const requestData = {
       sender_id: currentUser.id,
       receiver_id: receiverUser.id,
-      status: 'pending' as const,
+      status: requestStatus as 'accepted' | 'pending',
       updated_at: new Date().toISOString()
     }
     
     let result;
     if (existingRequest && existingRequest.status === 'declined') {
-      // Update declined request to pending
+      // Update declined request with appropriate status (accepted if public, pending if private)
       const { data: updatedRequest, error: updateError } = await supabase
         .from('friend_requests')
         .update(requestData)

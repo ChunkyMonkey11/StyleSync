@@ -17,6 +17,7 @@ interface UserProfile {
   bio?: string
   interests?: string[]
   gender?: 'MALE' | 'FEMALE' | 'NEUTRAL'
+  is_public?: boolean
   created_at: string
   updated_at?: string
 }
@@ -177,6 +178,7 @@ Deno.serve(async (req) => {
         bio: profileData.bio ?? null,
         interests: profileData.interests ?? [],
         gender: profileData.gender ?? null,
+        is_public: profileData.is_public ?? true,
         updated_at: profileData.updated_at ?? new Date().toISOString()
       }
 
@@ -200,6 +202,11 @@ Deno.serve(async (req) => {
     }
 
     console.log('Creating profile for:', profileData.username)
+
+    // Ensure is_public defaults to true if not provided
+    if (profileData.is_public === undefined) {
+      profileData.is_public = true
+    }
 
     const { data, error } = await supabase
       .from('userprofiles')

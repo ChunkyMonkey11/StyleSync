@@ -2,18 +2,6 @@ import { useState, useEffect } from 'react'
 import { useCurrentUser, Button, Input, Card } from '@shopify/shop-minis-react'
 import { useAuth } from '../../hooks/useAuth'
 
-interface UserProfile {
-    id: string
-    shop_public_id: string
-    username: string
-    display_name: string
-    profile_pic: string
-    bio: string
-    interests: string[]
-    created_at: string
-    updated_at: string
-}
-
 interface ProfileEditPageProps {
     onBack: () => void
     onSave: () => void
@@ -30,6 +18,7 @@ export function ProfileEditPage({ onBack, onSave }: ProfileEditPageProps) {
     const [interests, setInterests] = useState<string[]>([])
     const [customInterest, setCustomInterest] = useState('')
     const [activeBubbleIndex, setActiveBubbleIndex] = useState<number | null>(null)
+    const [isPublic, setIsPublic] = useState(true)
     
     // UI state
     const [isLoading, setIsLoading] = useState(true)
@@ -71,6 +60,7 @@ export function ProfileEditPage({ onBack, onSave }: ProfileEditPageProps) {
                     setUsername(profile.username || '')
                     setBio(profile.bio || '')
                     setInterests(profile.interests || [])
+                    setIsPublic(profile.is_public ?? true)
                 }
             }
         } catch (error) {
@@ -144,6 +134,7 @@ export function ProfileEditPage({ onBack, onSave }: ProfileEditPageProps) {
                 profile_pic: currentUser?.avatarImage?.url || '',
                 bio: bio.trim() || undefined,
                 interests: interests,
+                is_public: isPublic,
                 updated_at: new Date().toISOString()
             }
             
@@ -333,6 +324,39 @@ export function ProfileEditPage({ onBack, onSave }: ProfileEditPageProps) {
                                         </button>
                                     )
                                 })}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Public/Private Profile Toggle */}
+                    <div className="mb-6">
+                        <label className="block text-sm font-medium mb-3">Profile Visibility</label>
+                        <div className="bg-white/95 backdrop-blur-sm border border-gray-200 rounded-lg p-4">
+                            <div className="flex items-center justify-between mb-2">
+                                <div>
+                                    <p className="font-medium text-gray-800">Public Profile</p>
+                                    <p className="text-xs text-gray-600 mt-1">
+                                        {isPublic 
+                                            ? 'Discoverable in Public Profiles tab. Friend requests auto-accept.'
+                                            : 'Only discoverable via username search. Friend requests require approval.'
+                                        }
+                                    </p>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => setIsPublic(!isPublic)}
+                                    className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 ${
+                                        isPublic ? 'bg-purple-600' : 'bg-gray-300'
+                                    }`}
+                                    role="switch"
+                                    aria-checked={isPublic}
+                                >
+                                    <span
+                                        className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                                            isPublic ? 'translate-x-5' : 'translate-x-0'
+                                        }`}
+                                    />
+                                </button>
                             </div>
                         </div>
                     </div>

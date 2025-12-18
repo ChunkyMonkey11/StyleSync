@@ -1,6 +1,6 @@
 /**
- * StyleSync Remove Friend Function
- * Removes a friendship by deleting the accepted friend request
+ * StyleSync Get Followers Function
+ * Retrieves list of people following the authenticated user
  * Uses publicId from JWT (Minis Admin API integration)
  */
 
@@ -8,10 +8,6 @@ import { createClient } from 'jsr:@supabase/supabase-js@2'
 import { corsHeaders, handleCors } from '../_shared/cors.ts'
 import { verifyJWT, extractBearerToken } from '../_shared/jwt-utils.ts'
 import { errorResponse, successResponse, requireMethod } from '../_shared/responses.ts'
-
-interface RemoveFriendRequestBody {
-  friend_id: string // UUID of the friend to remove
-}
 
 // Main function that handles incoming requests
 Deno.serve(async (req) => {
@@ -24,14 +20,12 @@ Deno.serve(async (req) => {
       if (corsResponse) {
         return corsResponse
       }
-      // Fallback if handleCors returns null
       return new Response(null, {
         status: 200,
         headers: corsHeaders()
       })
     } catch (error) {
       console.error('Error handling OPTIONS request:', error)
-      // Always return success for OPTIONS even if there's an error
       return new Response(null, {
         status: 200,
         headers: corsHeaders()
@@ -42,7 +36,7 @@ Deno.serve(async (req) => {
   // ============================================
   // STEP 2: VERIFY HTTP METHOD
   // ============================================
-  const methodCheck = requireMethod(req, 'POST')
+  const methodCheck = requireMethod(req, 'GET')
   if (methodCheck) return methodCheck
 
   try {
@@ -77,25 +71,10 @@ Deno.serve(async (req) => {
     }
 
     const currentUserPublicId = payload.publicId;
+    console.log('Getting followers list for user:', currentUserPublicId);
     
     // ============================================
-    // STEP 4: PARSE REQUEST BODY
-    // ============================================
-    let body: RemoveFriendRequestBody
-    try {
-      body = await req.json()
-    } catch (error) {
-      return errorResponse('Invalid request body', 400)
-    }
-    
-    if (!body.friend_id || typeof body.friend_id !== 'string') {
-      return errorResponse('Missing or invalid friend_id', 400)
-    }
-    
-    console.log(`User ${currentUserPublicId} unfollowing user: ${body.friend_id}`)
-    
-    // ============================================
-    // STEP 5: INITIALIZE SUPABASE CLIENT
+    // STEP 4: INITIALIZE SUPABASE CLIENT
     // ============================================
     const supabaseUrl = Deno.env.get('SUPABASE_URL')
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
@@ -107,7 +86,7 @@ Deno.serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseKey)
     
     // ============================================
-    // STEP 6: GET CURRENT USER'S UUID
+    // STEP 5: GET CURRENT USER'S UUID
     // ============================================
     const { data: currentUser, error: currentUserError } = await supabase
       .from('userprofiles')
@@ -120,70 +99,58 @@ Deno.serve(async (req) => {
     }
     
     // ============================================
-    // STEP 7: VERIFY FRIEND_ID IS VALID
+    // STEP 6: GET PEOPLE FOLLOWING YOU
     // ============================================
-    const { data: friendUser, error: friendUserError } = await supabase
-      .from('userprofiles')
-      .select('id')
-      .eq('id', body.friend_id)
-      .single()
-    
-    if (friendUserError || !friendUser) {
-      return errorResponse('Friend not found', 404)
-    }
-    
-    // Can't remove yourself
-    if (currentUser.id === friendUser.id) {
-      return errorResponse('Cannot remove yourself', 400)
-    }
-    
-    // ============================================
-    // STEP 8: FIND FOLLOW REQUEST (where you're the sender)
-    // ============================================
-    // For Instagram-style following: unfollow only removes your follow (A→B)
-    // It doesn't remove their follow of you (B→A) if it exists
-    const { data: followingRequest, error: followingError } = await supabase
+    // Get requests where current user is receiver and status is 'accepted'
+    // This means they're following you
+    const { data: followers, error: followersError } = await supabase
       .from('friend_requests')
-      .select('id')
-      .eq('sender_id', currentUser.id)
-      .eq('receiver_id', friendUser.id)
+      .select(`
+        id,
+        sender_id,
+        created_at,
+        sender_profile:userprofiles!friend_requests_sender_id_fkey(
+          id,
+          username,
+          display_name,
+          profile_pic,
+          shop_public_id
+        )
+      `)
+      .eq('receiver_id', currentUser.id)
       .eq('status', 'accepted')
-      .maybeSingle()
+      .order('created_at', { ascending: false })
     
-    if (followingError) {
-      console.error('Error finding follow request:', followingError)
-      return errorResponse('Failed to find follow request', 500)
-    }
-    
-    if (!followingRequest) {
-      return errorResponse('You are not following this user', 404)
+    if (followersError) {
+      console.error('Error fetching followers:', followersError)
+      return errorResponse('Failed to fetch followers list', 500)
     }
     
     // ============================================
-    // STEP 9: DELETE FOLLOW REQUEST (UNFOLLOW)
+    // STEP 7: FORMAT RESPONSE
     // ============================================
-    const { error: deleteError } = await supabase
-      .from('friend_requests')
-      .delete()
-      .eq('id', followingRequest.id)
-    
-    if (deleteError) {
-      console.error('Error deleting follow request:', deleteError)
-      return errorResponse('Failed to unfollow user', 500)
-    }
+    const followersList = (followers || []).map(request => ({
+      id: request.id,
+      user_id: request.sender_id,
+      shop_public_id: request.sender_profile.shop_public_id,
+      user_profile: {
+        username: request.sender_profile.username,
+        display_name: request.sender_profile.display_name,
+        profile_pic: request.sender_profile.profile_pic,
+        shop_public_id: request.sender_profile.shop_public_id
+      },
+      followed_at: request.created_at
+    }))
     
     // ============================================
-    // STEP 10: RETURN SUCCESS
+    // STEP 8: RETURN SUCCESS
     // ============================================
     return successResponse({
-      message: 'Unfollowed successfully'
+      followers: followersList
     })
 
   } catch (error) {
-    console.error('Error in remove-friend:', error)
+    console.error('Error in get-followers:', error)
     return errorResponse('Internal server error', 500)
   }
 })
-
-
-

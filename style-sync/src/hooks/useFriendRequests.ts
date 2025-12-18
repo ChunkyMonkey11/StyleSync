@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react'
-import { useAuth } from './useAuth'
 import { apiRequestJson } from '../utils/apiClient'
+import { getFollowing, getFollowers, type FollowingUser, type FollowerUser } from '../utils/api/friends'
 
 interface FriendRequest {
   id: string
@@ -13,11 +13,13 @@ interface FriendRequest {
     username: string
     display_name: string
     profile_pic: string
+    shop_public_id?: string
   }
   receiver_profile?: {
     username: string
     display_name: string
     profile_pic: string
+    shop_public_id?: string
   }
 }
 
@@ -39,6 +41,8 @@ interface UseFriendRequestsReturn {
   sentRequests: FriendRequest[]
   receivedRequests: FriendRequest[]
   friends: Friend[]
+  following: FollowingUser[]
+  followers: FollowerUser[]
   isLoading: boolean
   error: string | null
   
@@ -51,12 +55,13 @@ interface UseFriendRequestsReturn {
 }
 
 export function useFriendRequests(): UseFriendRequestsReturn {
-  const { getValidToken } = useAuth()
   
   // State
   const [sentRequests, setSentRequests] = useState<FriendRequest[]>([])
   const [receivedRequests, setReceivedRequests] = useState<FriendRequest[]>([])
   const [friends, setFriends] = useState<Friend[]>([])
+  const [following, setFollowing] = useState<FollowingUser[]>([])
+  const [followers, setFollowers] = useState<FollowerUser[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -96,10 +101,12 @@ export function useFriendRequests(): UseFriendRequestsReturn {
       setError(null)
       
       // Fetch all data in parallel
-      const [sentRequestsData, receivedRequestsData, friendsData] = await Promise.all([
+      const [sentRequestsData, receivedRequestsData, friendsData, followingData, followersData] = await Promise.all([
         makeApiCall('get-friend-requests?type=sent') as Promise<{ requests?: FriendRequest[] }>,
         makeApiCall('get-friend-requests?type=received') as Promise<{ requests?: FriendRequest[] }>,
-        makeApiCall('get-friends') as Promise<{ friends?: Friend[] }>
+        makeApiCall('get-friends') as Promise<{ friends?: Friend[] }>,
+        getFollowing().catch(() => []), // Fallback to empty array on error
+        getFollowers().catch(() => [])  // Fallback to empty array on error
       ])
       
       // Deduplicate requests and friends to prevent duplicates
@@ -114,20 +121,38 @@ export function useFriendRequests(): UseFriendRequestsReturn {
         allStatuses: deduplicatedReceivedRequests.map(r => ({ id: r.id, status: r.status }))
       })
       
-      // Filter received requests to only show pending ones (accepted/declined should not appear)
-      const pendingReceivedRequests = deduplicatedReceivedRequests.filter(
-        req => req.status === 'pending'
-      )
+      // Filter received requests: show pending AND accepted (one-way follows from public profiles)
+      // BUT exclude accepted requests where we've already followed back (mutual follows)
+      // We check this by seeing if the sender is in our following list
+      const followingUserIds = new Set((Array.isArray(followingData) ? followingData : []).map(f => f.user_id))
       
-      console.log('[useFriendRequests] Filtered pending requests:', {
-        pendingCount: pendingReceivedRequests.length,
-        pendingRequests: pendingReceivedRequests.map(r => ({ id: r.id, status: r.status }))
+      const receivedRequestsToShow = deduplicatedReceivedRequests.filter(req => {
+        // Show pending requests always
+        if (req.status === 'pending') {
+          return true
+        }
+        // For accepted requests, only show if we haven't followed them back yet
+        // (i.e., they're not in our following list)
+        if (req.status === 'accepted') {
+          return !followingUserIds.has(req.sender_id)
+        }
+        return false
       })
       
-      // Filter sent requests - show all statuses so user can see if their request was accepted/declined
-      setSentRequests(deduplicatedSentRequests)
-      setReceivedRequests(pendingReceivedRequests)
+      console.log('[useFriendRequests] Filtered received requests:', {
+        count: receivedRequestsToShow.length,
+        requests: receivedRequestsToShow.map(r => ({ id: r.id, status: r.status, sender_id: r.sender_id }))
+      })
+      
+      // Filter sent requests - only show pending/declined requests (accepted ones are in following list)
+      const pendingSentRequests = deduplicatedSentRequests.filter(
+        req => req.status === 'pending' || req.status === 'declined'
+      )
+      setSentRequests(pendingSentRequests)
+      setReceivedRequests(receivedRequestsToShow)
       setFriends(deduplicatedFriends)
+      setFollowing(Array.isArray(followingData) ? followingData : [])
+      setFollowers(Array.isArray(followersData) ? followersData : [])
       
     } catch (error) {
       console.error('Error refreshing friend data:', error)
@@ -176,7 +201,34 @@ export function useFriendRequests(): UseFriendRequestsReturn {
       // Optimistically update UI: remove from receivedRequests immediately
       setReceivedRequests(prev => prev.filter(r => r.id !== requestId))
       
-      // Optimistically add to friends list
+      // If this is a "Follow Back" (accepted request), optimistically add to following list
+      const isFollowBack = requestToAccept.status === 'accepted'
+      
+      if (isFollowBack) {
+        // Optimistically add to following list
+        setFollowing(prev => {
+          const followingExists = prev.some(f => f.user_id === requestToAccept.sender_id)
+          if (followingExists) {
+            return prev
+          }
+          
+          const newFollowing: FollowingUser = {
+            id: requestId, // Temporary ID
+            user_id: requestToAccept.sender_id,
+            shop_public_id: requestToAccept.sender_profile?.shop_public_id || '',
+            user_profile: {
+              username: requestToAccept.sender_profile?.username || 'Unknown',
+              display_name: requestToAccept.sender_profile?.display_name || 'Unknown',
+              profile_pic: requestToAccept.sender_profile?.profile_pic || '',
+              shop_public_id: requestToAccept.sender_profile?.shop_public_id || ''
+            },
+            followed_at: new Date().toISOString()
+          }
+          return [...prev, newFollowing]
+        })
+      }
+      
+      // Optimistically add to friends list (for mutual follows)
       setFriends(prev => {
         // Check if friend already exists by sender_id to prevent duplicates
         const friendExists = prev.some(f => f.friend_id === requestToAccept.sender_id)
@@ -185,22 +237,26 @@ export function useFriendRequests(): UseFriendRequestsReturn {
           return prev
         }
         
-        // Construct friend object from request (temporary until refresh)
-        // Note: shop_public_id will be updated correctly after refreshData
-        const newFriend: Friend = {
-          id: requestId, // Use request ID temporarily
-          friend_id: requestToAccept.sender_id, // This is the UUID we need
-          shop_public_id: '', // Will be updated on refresh, but friend_id is what matters
-          friend_profile: {
-            username: requestToAccept.sender_profile.username,
-            display_name: requestToAccept.sender_profile.display_name,
-            profile_pic: requestToAccept.sender_profile.profile_pic,
-            shop_public_id: '' // Will be updated on refresh
-          },
-          created_at: new Date().toISOString()
+        // Only add to friends if it's a follow back (will become mutual)
+        if (isFollowBack) {
+          // Construct friend object from request (temporary until refresh)
+          const newFriend: Friend = {
+            id: requestId, // Use request ID temporarily
+            friend_id: requestToAccept.sender_id,
+            shop_public_id: requestToAccept.sender_profile?.shop_public_id || '',
+            friend_profile: {
+              username: requestToAccept.sender_profile?.username || 'Unknown',
+              display_name: requestToAccept.sender_profile?.display_name || 'Unknown',
+              profile_pic: requestToAccept.sender_profile?.profile_pic || '',
+              shop_public_id: requestToAccept.sender_profile?.shop_public_id || ''
+            },
+            created_at: new Date().toISOString()
+          }
+          
+          return [...prev, newFriend]
         }
         
-        return [...prev, newFriend]
+        return prev
       })
       
       await makeApiCall('respond-friend-request', {
@@ -229,6 +285,9 @@ export function useFriendRequests(): UseFriendRequestsReturn {
         return exists ? prev : [...prev, requestToAccept]
       })
       setFriends(prev => prev.filter(f => f.id !== requestId))
+      if (isFollowBack) {
+        setFollowing(prev => prev.filter(f => f.id !== requestId))
+      }
       
       throw error
     } finally {
@@ -269,14 +328,15 @@ export function useFriendRequests(): UseFriendRequestsReturn {
     }
   }, [makeApiCall, refreshData])
 
-  // Remove friend
+  // Remove friend / Unfollow
   const removeFriend = useCallback(async (friendId: string) => {
     try {
       setIsLoading(true)
       setError(null)
       
-      // Optimistically remove from friends list
+      // Optimistically remove from friends and following lists
       setFriends(prev => prev.filter(f => f.friend_id !== friendId))
+      setFollowing(prev => prev.filter(f => f.user_id !== friendId))
       
       await makeApiCall('remove-friend', {
         method: 'POST',
@@ -287,8 +347,8 @@ export function useFriendRequests(): UseFriendRequestsReturn {
       await refreshData()
       
     } catch (error) {
-      console.error('Error removing friend:', error)
-      setError(error instanceof Error ? error.message : 'Failed to remove friend')
+      console.error('Error unfollowing user:', error)
+      setError(error instanceof Error ? error.message : 'Failed to unfollow user')
       
       // Revert optimistic update on error
       await refreshData()
@@ -304,6 +364,8 @@ export function useFriendRequests(): UseFriendRequestsReturn {
     sentRequests,
     receivedRequests,
     friends,
+    following,
+    followers,
     isLoading,
     error,
     

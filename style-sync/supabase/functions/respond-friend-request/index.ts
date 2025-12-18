@@ -145,14 +145,106 @@ Deno.serve(async (req) => {
       return errorResponse('Unauthorized: You can only respond to requests sent to you', 403)
     }
     
-    // Can't respond to already processed requests
-    if (friendRequest.status !== 'pending') {
-      return errorResponse(`Friend request already ${friendRequest.status}`, 409)
+    // Handle pending requests (normal flow) and accepted requests (one-way follows)
+    if (friendRequest.status === 'declined') {
+      return errorResponse('Friend request already declined', 409)
     }
     
     // ============================================
-    // STEP 9: UPDATE FRIEND REQUEST STATUS
+    // STEP 9: HANDLE REQUEST RESPONSE
     // ============================================
+    // For accepted requests (one-way follows from public profiles):
+    // - Accept = create reverse request (follow back) to make it mutual
+    // - Decline = delete the request (remove follower)
+    if (friendRequest.status === 'accepted') {
+      if (body.response === 'declined') {
+        // Delete the request to remove the follower
+        const { error: deleteError } = await supabase
+          .from('friend_requests')
+          .delete()
+          .eq('id', body.request_id)
+        
+        if (deleteError) {
+          console.error('Error deleting friend request:', deleteError)
+          return errorResponse('Failed to remove follower', 500)
+        }
+        
+        return successResponse({
+          request: null,
+          message: 'Follower removed successfully'
+        })
+      } else {
+        // Accept = create reverse request (B→A) to follow them back
+        // Check if reverse request already exists
+        const { data: existingReverse, error: reverseCheckError } = await supabase
+          .from('friend_requests')
+          .select('id, status')
+          .eq('sender_id', currentUser.id)
+          .eq('receiver_id', friendRequest.sender_id)
+          .maybeSingle()
+        
+        if (reverseCheckError) {
+          console.error('Error checking reverse request:', reverseCheckError)
+          return errorResponse('Failed to check existing follow', 500)
+        }
+        
+        if (existingReverse) {
+          if (existingReverse.status === 'accepted') {
+            // Already following back (mutual)
+            return successResponse({
+              request: friendRequest,
+              message: 'Already following back'
+            })
+          } else {
+            // Update existing reverse request to accepted
+            const { data: updatedReverse, error: updateReverseError } = await supabase
+              .from('friend_requests')
+              .update({
+                status: 'accepted',
+                updated_at: new Date().toISOString()
+              })
+              .eq('id', existingReverse.id)
+              .select()
+              .single()
+            
+            if (updateReverseError) {
+              console.error('Error updating reverse request:', updateReverseError)
+              return errorResponse('Failed to follow back', 500)
+            }
+            
+            return successResponse({
+              request: updatedReverse,
+              message: 'Follow back successful'
+            })
+          }
+        } else {
+          // Create new reverse request (B→A) with status='accepted'
+          const { data: newReverseRequest, error: createReverseError } = await supabase
+            .from('friend_requests')
+            .insert({
+              sender_id: currentUser.id,
+              receiver_id: friendRequest.sender_id,
+              status: 'accepted',
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            })
+            .select()
+            .single()
+          
+          if (createReverseError) {
+            console.error('Error creating reverse request:', createReverseError)
+            return errorResponse('Failed to follow back', 500)
+          }
+          
+          return successResponse({
+            request: newReverseRequest,
+            message: 'Follow back successful'
+          })
+        }
+      }
+    }
+    
+    // For pending requests: normal accept/decline flow
     const { data: updatedRequest, error: updateError } = await supabase
       .from('friend_requests')
       .update({

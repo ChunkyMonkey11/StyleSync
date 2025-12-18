@@ -106,24 +106,16 @@ Deno.serve(async (req) => {
     }
     
     // ============================================
-    // STEP 6: GET ACCEPTED FRIENDSHIPS
+    // STEP 6: GET PEOPLE YOU FOLLOW
     // ============================================
+    // Get requests where current user is sender (people you follow)
+    // This allows viewing feeds of people you follow (one-way is fine)
     const { data: friendships, error: friendshipsError } = await supabase
       .from('friend_requests')
       .select(`
         id,
-        sender_id,
         receiver_id,
         created_at,
-        sender_profile:userprofiles!friend_requests_sender_id_fkey(
-          id,
-          username,
-          display_name,
-          profile_pic,
-          shop_public_id,
-          bio,
-          interests
-        ),
         receiver_profile:userprofiles!friend_requests_receiver_id_fkey(
           id,
           username,
@@ -134,8 +126,8 @@ Deno.serve(async (req) => {
           interests
         )
       `)
+      .eq('sender_id', currentUser.id)
       .eq('status', 'accepted')
-      .or(`sender_id.eq.${currentUser.id},receiver_id.eq.${currentUser.id}`)
     
     if (friendshipsError) {
       console.error('Error fetching friendships:', friendshipsError)
@@ -143,12 +135,11 @@ Deno.serve(async (req) => {
     }
     
     // ============================================
-    // STEP 7: FORMAT FRIENDS AND GET CARD PROFILES
+    // STEP 7: FORMAT FOLLOWING AND GET CARD PROFILES
     // ============================================
     const friends = (friendships || []).map(friendship => {
-      const isSender = friendship.sender_id === currentUser.id
-      const friendProfile = isSender ? friendship.receiver_profile : friendship.sender_profile
-      const friendId = isSender ? friendship.receiver_id : friendship.sender_id
+      const friendProfile = friendship.receiver_profile
+      const friendId = friendship.receiver_id
       
       return {
         id: friendId,

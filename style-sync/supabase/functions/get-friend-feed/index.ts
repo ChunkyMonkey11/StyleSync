@@ -150,21 +150,23 @@ Deno.serve(async (req) => {
         return errorResponse('User not found', 404)
       }
       
-      // Check if they are friends (either direction) using UUIDs
-      const { data: friendship, error: friendshipError } = await supabase
+      // Check if current user is following the friend (one-way is fine)
+      // You can view feeds of people you follow
+      const { data: following, error: followingError } = await supabase
         .from('friend_requests')
         .select('id')
+        .eq('sender_id', currentUser.id)
+        .eq('receiver_id', friendUser.id)
         .eq('status', 'accepted')
-        .or(`and(sender_id.eq.${currentUser.id},receiver_id.eq.${friendUser.id}),and(sender_id.eq.${friendUser.id},receiver_id.eq.${currentUser.id})`)
-        .limit(1)
+        .maybeSingle()
       
-      if (friendshipError) {
-        console.error('Error checking friendship:', friendshipError)
-        return errorResponse('Failed to verify friendship', 500)
+      if (followingError) {
+        console.error('Error checking following status:', followingError)
+        return errorResponse('Failed to verify follow status', 500)
       }
       
-      if (!friendship || friendship.length === 0) {
-        return errorResponse('You can only view feeds from your friends', 403)
+      if (!following) {
+        return errorResponse('You can only view feeds from people you follow', 403)
       }
     }
     

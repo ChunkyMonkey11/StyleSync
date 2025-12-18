@@ -122,6 +122,7 @@ interface UserProfile {
     profile_pic: string
     bio: string
     interests: string[]
+    is_public?: boolean
     created_at: string
     updated_at: string
 }

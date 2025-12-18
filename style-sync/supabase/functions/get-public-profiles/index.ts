@@ -1,6 +1,6 @@
 /**
- * StyleSync Remove Friend Function
- * Removes a friendship by deleting the accepted friend request
+ * StyleSync Get Public Profiles Function
+ * Retrieves list of public profiles excluding current user and existing friends
  * Uses publicId from JWT (Minis Admin API integration)
  */
 
@@ -8,10 +8,6 @@ import { createClient } from 'jsr:@supabase/supabase-js@2'
 import { corsHeaders, handleCors } from '../_shared/cors.ts'
 import { verifyJWT, extractBearerToken } from '../_shared/jwt-utils.ts'
 import { errorResponse, successResponse, requireMethod } from '../_shared/responses.ts'
-
-interface RemoveFriendRequestBody {
-  friend_id: string // UUID of the friend to remove
-}
 
 // Main function that handles incoming requests
 Deno.serve(async (req) => {
@@ -42,7 +38,7 @@ Deno.serve(async (req) => {
   // ============================================
   // STEP 2: VERIFY HTTP METHOD
   // ============================================
-  const methodCheck = requireMethod(req, 'POST')
+  const methodCheck = requireMethod(req, 'GET')
   if (methodCheck) return methodCheck
 
   try {
@@ -77,25 +73,10 @@ Deno.serve(async (req) => {
     }
 
     const currentUserPublicId = payload.publicId;
+    console.log('Getting public profiles for user:', currentUserPublicId);
     
     // ============================================
-    // STEP 4: PARSE REQUEST BODY
-    // ============================================
-    let body: RemoveFriendRequestBody
-    try {
-      body = await req.json()
-    } catch (error) {
-      return errorResponse('Invalid request body', 400)
-    }
-    
-    if (!body.friend_id || typeof body.friend_id !== 'string') {
-      return errorResponse('Missing or invalid friend_id', 400)
-    }
-    
-    console.log(`User ${currentUserPublicId} unfollowing user: ${body.friend_id}`)
-    
-    // ============================================
-    // STEP 5: INITIALIZE SUPABASE CLIENT
+    // STEP 4: INITIALIZE SUPABASE CLIENT
     // ============================================
     const supabaseUrl = Deno.env.get('SUPABASE_URL')
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
@@ -107,7 +88,7 @@ Deno.serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseKey)
     
     // ============================================
-    // STEP 6: GET CURRENT USER'S UUID
+    // STEP 5: GET CURRENT USER'S UUID
     // ============================================
     const { data: currentUser, error: currentUserError } = await supabase
       .from('userprofiles')
@@ -120,70 +101,71 @@ Deno.serve(async (req) => {
     }
     
     // ============================================
-    // STEP 7: VERIFY FRIEND_ID IS VALID
+    // STEP 6: GET EXISTING FRIEND IDs AND PENDING/ACCEPTED REQUESTS
     // ============================================
-    const { data: friendUser, error: friendUserError } = await supabase
+    // Get all friend requests where current user is involved (both sent and received)
+    // This includes accepted (friends) and pending requests
+    const { data: friendships, error: friendshipsError } = await supabase
+      .from('friend_requests')
+      .select('sender_id, receiver_id, status')
+      .or(`sender_id.eq.${currentUser.id},receiver_id.eq.${currentUser.id}`)
+      .in('status', ['accepted', 'pending'])
+    
+    if (friendshipsError) {
+      console.error('Error fetching friendships:', friendshipsError)
+      return errorResponse('Failed to fetch existing friends', 500)
+    }
+    
+    // Collect all user IDs to exclude (friends + users with pending/accepted requests)
+    const excludedIds = new Set<string>()
+    if (friendships) {
+      friendships.forEach(friendship => {
+        if (friendship.sender_id === currentUser.id) {
+          // Current user sent the request - exclude the receiver
+          excludedIds.add(friendship.receiver_id)
+        } else {
+          // Current user received the request - exclude the sender
+          excludedIds.add(friendship.sender_id)
+        }
+      })
+    }
+    
+    // ============================================
+    // STEP 7: GET PUBLIC PROFILES
+    // ============================================
+    // Get all public profiles excluding current user
+    const { data: allPublicProfiles, error: profilesError } = await supabase
       .from('userprofiles')
-      .select('id')
-      .eq('id', body.friend_id)
-      .single()
+      .select('id, shop_public_id, username, display_name, profile_pic, bio, interests, is_public, created_at')
+      .eq('is_public', true)
+      .neq('id', currentUser.id)
+      .neq('shop_public_id', currentUserPublicId)
+      .order('created_at', { ascending: false })
     
-    if (friendUserError || !friendUser) {
-      return errorResponse('Friend not found', 404)
+    if (profilesError) {
+      console.error('Error fetching public profiles:', profilesError)
+      return errorResponse('Failed to fetch public profiles', 500)
     }
     
-    // Can't remove yourself
-    if (currentUser.id === friendUser.id) {
-      return errorResponse('Cannot remove yourself', 400)
-    }
+    // Filter out users we've already interacted with (friends or pending/accepted requests)
+    const publicProfiles = (allPublicProfiles || []).filter(profile => !excludedIds.has(profile.id))
     
-    // ============================================
-    // STEP 8: FIND FOLLOW REQUEST (where you're the sender)
-    // ============================================
-    // For Instagram-style following: unfollow only removes your follow (A→B)
-    // It doesn't remove their follow of you (B→A) if it exists
-    const { data: followingRequest, error: followingError } = await supabase
-      .from('friend_requests')
-      .select('id')
-      .eq('sender_id', currentUser.id)
-      .eq('receiver_id', friendUser.id)
-      .eq('status', 'accepted')
-      .maybeSingle()
-    
-    if (followingError) {
-      console.error('Error finding follow request:', followingError)
-      return errorResponse('Failed to find follow request', 500)
-    }
-    
-    if (!followingRequest) {
-      return errorResponse('You are not following this user', 404)
+    if (profilesError) {
+      console.error('Error fetching public profiles:', profilesError)
+      return errorResponse('Failed to fetch public profiles', 500)
     }
     
     // ============================================
-    // STEP 9: DELETE FOLLOW REQUEST (UNFOLLOW)
-    // ============================================
-    const { error: deleteError } = await supabase
-      .from('friend_requests')
-      .delete()
-      .eq('id', followingRequest.id)
-    
-    if (deleteError) {
-      console.error('Error deleting follow request:', deleteError)
-      return errorResponse('Failed to unfollow user', 500)
-    }
-    
-    // ============================================
-    // STEP 10: RETURN SUCCESS
+    // STEP 8: RETURN SUCCESS
     // ============================================
     return successResponse({
-      message: 'Unfollowed successfully'
+      profiles: publicProfiles || []
     })
 
   } catch (error) {
-    console.error('Error in remove-friend:', error)
+    console.error('Error in get-public-profiles:', error)
     return errorResponse('Internal server error', 500)
   }
 })
-
 
 

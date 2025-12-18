@@ -305,9 +305,8 @@ export function DealingOverlay({ onFinish, onSkip, deckButtonPosition }: Dealing
                 ? `translate3d(${deltaX}px, ${deltaY}px, 0) rotate(${animCard.endRotation}deg) scale(1)`
                 : `translate3d(0, 0, 0) rotate(${animCard.startRotation}deg) scale(${animCard.startScale})`,
               transition: animCard.hasStarted
-                ? `transform ${duration}ms cubic-bezier(0.25, 0.1, 0.25, 1), opacity 200ms ease-out`
+                ? `transform ${duration}ms cubic-bezier(0.25, 0.1, 0.25, 1) ${animCard.delay}ms, opacity 200ms ease-out ${animCard.delay}ms`
                 : 'none',
-              transitionDelay: `${animCard.delay}ms`,
               opacity: (isAnimating && animCard.hasStarted) && !isFadingOut ? 1 : isFadingOut ? 0 : 0,
               zIndex: 10 + animCard.id,
               pointerEvents: 'none',

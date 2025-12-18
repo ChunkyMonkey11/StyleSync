@@ -1,6 +1,6 @@
 /**
  * StyleSync Get Friends Function
- * Retrieves list of accepted friends for the authenticated user
+ * Retrieves list of mutual follows (both users follow each other)
  * Uses publicId from JWT (Minis Admin API integration)
  */
 
@@ -73,7 +73,7 @@ Deno.serve(async (req) => {
     }
 
     const currentUserPublicId = payload.publicId;
-    console.log('Getting friends for user:', currentUserPublicId);
+    console.log('Getting mutual follows for user:', currentUserPublicId);
     
     // ============================================
     // STEP 4: INITIALIZE SUPABASE CLIENT
@@ -101,23 +101,13 @@ Deno.serve(async (req) => {
     }
     
     // ============================================
-    // STEP 6: GET ACCEPTED FRIENDSHIPS
+    // STEP 6: GET MUTUAL FOLLOWS
     // ============================================
-    // Get friendships where current user is either sender or receiver and status is 'accepted'
-    const { data: friendships, error: friendshipsError } = await supabase
+    // Get requests where current user is sender (people you follow)
+    const { data: youFollow, error: youFollowError } = await supabase
       .from('friend_requests')
       .select(`
-        id,
-        sender_id,
         receiver_id,
-        created_at,
-        sender_profile:userprofiles!friend_requests_sender_id_fkey(
-          id,
-          username,
-          display_name,
-          profile_pic,
-          shop_public_id
-        ),
         receiver_profile:userprofiles!friend_requests_receiver_id_fkey(
           id,
           username,
@@ -126,35 +116,69 @@ Deno.serve(async (req) => {
           shop_public_id
         )
       `)
+      .eq('sender_id', currentUser.id)
       .eq('status', 'accepted')
-      .or(`sender_id.eq.${currentUser.id},receiver_id.eq.${currentUser.id}`)
     
-    if (friendshipsError) {
-      console.error('Error fetching friendships:', friendshipsError)
+    if (youFollowError) {
+      console.error('Error fetching people you follow:', youFollowError)
+      return errorResponse('Failed to fetch friends', 500)
+    }
+    
+    // Get requests where current user is receiver (people following you)
+    const { data: followYou, error: followYouError } = await supabase
+      .from('friend_requests')
+      .select(`
+        sender_id,
+        sender_profile:userprofiles!friend_requests_sender_id_fkey(
+          id,
+          username,
+          display_name,
+          profile_pic,
+          shop_public_id
+        )
+      `)
+      .eq('receiver_id', currentUser.id)
+      .eq('status', 'accepted')
+    
+    if (followYouError) {
+      console.error('Error fetching people following you:', followYouError)
       return errorResponse('Failed to fetch friends', 500)
     }
     
     // ============================================
-    // STEP 7: FORMAT RESPONSE
+    // STEP 7: FIND MUTUAL FOLLOWS
     // ============================================
-    // Transform friendships to friend objects
-    const friends = (friendships || []).map(friendship => {
-      // Determine which user is the friend (not the current user)
-      const isSender = friendship.sender_id === currentUser.id
-      const friendProfile = isSender ? friendship.receiver_profile : friendship.sender_profile
-      const friendId = isSender ? friendship.receiver_id : friendship.sender_id
+    // Create sets for quick lookup
+    const youFollowIds = new Set((youFollow || []).map(f => f.receiver_id))
+    const followYouIds = new Set((followYou || []).map(f => f.sender_id))
+    
+    // Find users where both directions exist (mutual follows)
+    const mutualUserIds = new Set<string>()
+    youFollowIds.forEach(userId => {
+      if (followYouIds.has(userId)) {
+        mutualUserIds.add(userId)
+      }
+    })
+    
+    // Build friends list from mutual follows
+    const friends = Array.from(mutualUserIds).map(userId => {
+      // Find the profile from either list
+      const fromYouFollow = (youFollow || []).find(f => f.receiver_id === userId)
+      const fromFollowYou = (followYou || []).find(f => f.sender_id === userId)
+      
+      const profile = fromYouFollow?.receiver_profile || fromFollowYou?.sender_profile
       
       return {
-        id: friendship.id, // friend_requests.id
-        friend_id: friendId, // friend's UUID id (for remove-friend)
-        shop_public_id: friendProfile.shop_public_id, // friend's shop_public_id (for get-friend-feed)
+        id: userId, // Use user ID as identifier
+        friend_id: userId, // friend's UUID id (for remove-friend)
+        shop_public_id: profile.shop_public_id,
         friend_profile: {
-          username: friendProfile.username,
-          display_name: friendProfile.display_name,
-          profile_pic: friendProfile.profile_pic,
-          shop_public_id: friendProfile.shop_public_id
+          username: profile.username,
+          display_name: profile.display_name,
+          profile_pic: profile.profile_pic,
+          shop_public_id: profile.shop_public_id
         },
-        created_at: friendship.created_at
+        created_at: fromYouFollow ? new Date().toISOString() : new Date().toISOString()
       }
     })
     

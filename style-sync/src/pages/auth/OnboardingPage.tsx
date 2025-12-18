@@ -17,6 +17,7 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps) {
     const [activeBubbleIndex, setActiveBubbleIndex] = useState<number | null>(null)
     const [errors, setErrors] = useState<Record<string, string>>({})
     const [isSubmitting, setIsSubmitting] = useState(false)
+    const [isPublic, setIsPublic] = useState(true)
     
     const interestOptions = [
         'Fashion', 'Streetwear', 'Vintage', 'Luxury', 'Sustainable', 
@@ -95,6 +96,7 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps) {
                 bio: bio.trim() || undefined,
                 interests: interests,
                 gender: gender || undefined,
+                is_public: isPublic,
                 created_at: new Date().toISOString()
             }
             
@@ -293,6 +295,39 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps) {
                                     {g === 'MALE' ? 'Male' : g === 'FEMALE' ? 'Female' : 'Non-binary'}
                                 </button>
                             ))}
+                        </div>
+                    </div>
+
+                    {/* Public/Private Profile Toggle */}
+                    <div className="mb-6">
+                        <label className="block text-sm font-medium mb-3">Profile Visibility</label>
+                        <div className="bg-white/95 backdrop-blur-sm border border-gray-200 rounded-lg p-4">
+                            <div className="flex items-center justify-between mb-2">
+                                <div>
+                                    <p className="font-medium text-gray-800">Public Profile</p>
+                                    <p className="text-xs text-gray-600 mt-1">
+                                        {isPublic 
+                                            ? 'Discoverable in Public Profiles tab. Friend requests auto-accept.'
+                                            : 'Only discoverable via username search. Friend requests require approval.'
+                                        }
+                                    </p>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => setIsPublic(!isPublic)}
+                                    className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 ${
+                                        isPublic ? 'bg-purple-600' : 'bg-gray-300'
+                                    }`}
+                                    role="switch"
+                                    aria-checked={isPublic}
+                                >
+                                    <span
+                                        className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                                            isPublic ? 'translate-x-5' : 'translate-x-0'
+                                        }`}
+                                    />
+                                </button>
+                            </div>
                         </div>
                     </div>
                     
