@@ -349,17 +349,6 @@ export function MainApp() {
         setCurrentView('feeds')
     }
 
-    /**
-     * Handles skip animation: navigates immediately to feeds
-     */
-    const handleDealingSkip = () => {
-        setIsDeckOpening(false)
-        setShowDealingOverlay(false)
-        setDeckButtonPosition(undefined)
-        setCurrentView('feeds')
-    }
-    
-
     // ============================================
     // CONDITIONAL VIEW RENDERING
     // ============================================
@@ -517,7 +506,6 @@ export function MainApp() {
             {showDealingOverlay && (
                 <DealingOverlay
                     onFinish={handleDealingFinish}
-                    onSkip={handleDealingSkip}
                     deckButtonPosition={deckButtonPosition}
                 />
             )}

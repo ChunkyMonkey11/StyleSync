@@ -3,11 +3,10 @@ import logoImage from '../logo.png'
 
 interface DealingOverlayProps {
   onFinish: () => void
-  onSkip: () => void
   deckButtonPosition?: { x: number; y: number }
 }
 
-export function DealingOverlay({ onFinish, onSkip, deckButtonPosition }: DealingOverlayProps) {
+export function DealingOverlay({ onFinish, deckButtonPosition }: DealingOverlayProps) {
   const [isAnimating, setIsAnimating] = useState(false)
   const [isFadingOut, setIsFadingOut] = useState(false)
   const [animatedCards, setAnimatedCards] = useState<Array<{ 
@@ -269,20 +268,6 @@ export function DealingOverlay({ onFinish, onSkip, deckButtonPosition }: Dealing
           zIndex: 1,
         }}
       />
-      
-      {/* Skip Button */}
-      {!prefersReducedMotion.current && isAnimating && (
-        <button
-          onClick={onSkip}
-          className="absolute top-4 right-4 bg-white/20 backdrop-blur-sm text-white px-4 py-2 rounded-full border border-white/30 hover:bg-white/30 transition-colors text-sm font-medium z-20 pointer-events-auto"
-          style={{
-            opacity: isFadingOut ? 0 : 1,
-            transition: 'opacity 200ms ease-out'
-          }}
-        >
-          Skip animation
-        </button>
-      )}
 
       {/* Animated Deck Cards - Ripple/Shuffle Effect */}
       {animatedCards.map((animCard) => {

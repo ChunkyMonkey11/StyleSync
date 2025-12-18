@@ -13,6 +13,7 @@ export function FriendsPage({ onBack }: FriendsPageProps) {
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [publicProfiles, setPublicProfiles] = useState<PublicProfile[]>([])
     const [isLoadingPublic, setIsLoadingPublic] = useState(false)
+    const [addingProfileId, setAddingProfileId] = useState<string | null>(null)
     
     const {
         sentRequests,
@@ -455,21 +456,20 @@ export function FriendsPage({ onBack }: FriendsPageProps) {
                                         <button
                                             onClick={async () => {
                                                 try {
-                                                    setIsSubmitting(true)
+                                                    setAddingProfileId(profile.id)
                                                     await sendFriendRequest(profile.username)
                                                     await fetchPublicProfiles()
                                                     await refreshData()
-                                                    setActiveTab('send')
                                                 } catch (error) {
                                                     console.error('Error sending friend request:', error)
                                                 } finally {
-                                                    setIsSubmitting(false)
+                                                    setAddingProfileId(null)
                                                 }
                                             }}
-                                            disabled={isSubmitting}
+                                            disabled={addingProfileId === profile.id}
                                             className="px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white text-sm font-semibold rounded-xl active:scale-95 transition-all duration-200 shadow-md flex-shrink-0 whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
                                         >
-                                            {isSubmitting ? 'Adding...' : 'Follow'}
+                                            {addingProfileId === profile.id ? 'Adding...' : 'Follow'}
                                         </button>
                                     </div>
                                 ))}

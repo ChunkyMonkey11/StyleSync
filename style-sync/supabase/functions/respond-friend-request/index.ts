@@ -170,6 +170,13 @@ Deno.serve(async (req) => {
           return errorResponse('Failed to remove follower', 500)
         }
         
+        // Invalidate the sender's card profile cache - their following count decreased
+        const supabaseUrl = Deno.env.get('SUPABASE_URL')
+        const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+        if (supabaseUrl && supabaseKey) {
+          await invalidateCardProfileCache(supabaseUrl, supabaseKey, friendRequest.sender_id)
+        }
+        
         return successResponse({
           request: null,
           message: 'Follower removed successfully'
@@ -273,6 +280,16 @@ Deno.serve(async (req) => {
     if (updateError) {
       console.error('Error updating friend request:', updateError)
       return errorResponse('Failed to update friend request', 500)
+    }
+    
+    // If request was accepted, invalidate the sender's card profile cache
+    // Their following count increased (from pending to accepted)
+    if (body.response === 'accepted') {
+      const supabaseUrl = Deno.env.get('SUPABASE_URL')
+      const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+      if (supabaseUrl && supabaseKey) {
+        await invalidateCardProfileCache(supabaseUrl, supabaseKey, friendRequest.sender_id)
+      }
     }
     
     // ============================================
