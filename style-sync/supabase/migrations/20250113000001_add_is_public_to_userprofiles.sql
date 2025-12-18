@@ -9,3 +9,6 @@ UPDATE userprofiles SET is_public = true WHERE is_public IS NULL;
 CREATE INDEX IF NOT EXISTS idx_userprofiles_is_public ON userprofiles(is_public) WHERE is_public = true;
 
 
+
+
+

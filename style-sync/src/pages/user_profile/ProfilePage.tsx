@@ -61,6 +61,12 @@ export function ProfilePage({ onBack, onEdit, onDeckGuide }: ProfilePageProps) {
             setError(null)
             
             const cardData = await getCardProfile()
+            console.log('🎴 Card Profile Response:', {
+                rank: cardData.rank,
+                friends_count: cardData.friends_count,
+                suit: cardData.suit,
+                username: cardData.username
+            })
             setCardProfile(cardData)
             
             // Also fetch regular profile for interests

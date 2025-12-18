@@ -12,6 +12,21 @@ export function App() {
   const [animationStartTime] = useState(Date.now())
   const onboardingCompletedRef = useRef(false)
 
+  // Add class to body when app is loaded (not showing loading screen)
+  // This prevents the purple background from flashing before React renders
+  useEffect(() => {
+    if (!isInitializing && !showLoading && !error) {
+      document.body.classList.add('app-loaded')
+    } else {
+      document.body.classList.remove('app-loaded')
+    }
+
+    // Cleanup on unmount
+    return () => {
+      document.body.classList.remove('app-loaded')
+    }
+  }, [isInitializing, showLoading, error])
+
   // Update hasProfile when initialization completes
   // Only update from initializationData if onboarding hasn't been completed
   useEffect(() => {

@@ -8,7 +8,6 @@ import { errorResponse, successResponse, requireMethod } from '../_shared/respon
 import {
   getRankFromFriendsCount,
   getSuitFromInterests,
-  getRankProgression,
   type CardRank,
   type CardSuit
 } from '../_shared/card-computation.ts'
@@ -68,49 +67,7 @@ Deno.serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, supabaseKey)
 
-    // Check cache
-    const { data: cachedProfile } = await supabase
-      .from('user_card_profile')
-      .select('*')
-      .eq('shop_public_id', shopPublicId)
-      .single()
-
-    const now = new Date()
-    const cacheExpiry = cachedProfile?.computed_at
-      ? new Date(new Date(cachedProfile.computed_at).getTime() + CACHE_DURATION_HOURS * 60 * 60 * 1000)
-      : null
-
-    // Return cached if still valid
-    if (cachedProfile && cacheExpiry && now < cacheExpiry) {
-      // Get user profile for display
-      const { data: userProfile } = await supabase
-        .from('userprofiles')
-        .select('username, display_name, profile_pic, bio, interests')
-        .eq('shop_public_id', shopPublicId)
-        .single()
-
-      const progression = getRankProgression(cachedProfile.rank as CardRank)
-
-      return successResponse({
-        rank: cachedProfile.rank,
-        suit: cachedProfile.suit,
-        friends_count: cachedProfile.friends_count,
-        username: userProfile?.username || '',
-        display_name: userProfile?.display_name || '',
-        avatar_url: userProfile?.profile_pic || '',
-        bio: userProfile?.bio || '',
-        interests: userProfile?.interests || [],
-        next_rank_progress: {
-          ...progression,
-          current_friends_in_range: cachedProfile.friends_count - progression.rankRangeMin
-        }
-      })
-    }
-
-    // Compute fresh profile
-    console.log('Computing fresh card profile for:', shopPublicId)
-
-    // Get user profile with interests
+    // Get user profile first (needed for both cache validation and fresh computation)
     const { data: userProfile, error: profileError } = await supabase
       .from('userprofiles')
       .select('id, username, display_name, profile_pic, bio, interests')
@@ -121,21 +78,39 @@ Deno.serve(async (req) => {
       return errorResponse('User profile not found', 404)
     }
 
+    // Always recalculate to ensure accuracy
+
     const userId = userProfile.id
 
-    // Get friends count (accepted friendships where user is sender or receiver)
-    const { data: friendships, error: friendsError } = await supabase
+    // Use the EXACT same query as get-following (including .order())
+    // This ensures 100% consistency between card profile and Following tab
+    const { data: following, error: followingError } = await supabase
       .from('friend_requests')
-      .select('id')
+      .select(`
+        id,
+        receiver_id,
+        created_at,
+        receiver_profile:userprofiles!friend_requests_receiver_id_fkey(
+          id,
+          username,
+          display_name,
+          profile_pic,
+          shop_public_id
+        )
+      `)
+      .eq('sender_id', userId)
       .eq('status', 'accepted')
-      .or(`sender_id.eq.${userId},receiver_id.eq.${userId}`)
+      .order('created_at', { ascending: false })
 
-    if (friendsError) {
-      console.error('Error fetching friendships:', friendsError)
+    if (followingError) {
+      console.error('Error fetching following:', followingError)
       return errorResponse('Failed to fetch friends count', 500)
     }
 
-    const friendsCount = friendships?.length || 0
+    // Filter out records with null receiver_profile (same as get-following does)
+    // This ensures we only count valid follows where the receiver user still exists
+    const validFollowing = (following || []).filter(f => f.receiver_profile !== null)
+    const friendsCount = validFollowing.length
 
     // Compute rank
     const rank = getRankFromFriendsCount(friendsCount)
@@ -143,10 +118,8 @@ Deno.serve(async (req) => {
     // Compute suit from interests
     const suit = getSuitFromInterests(userProfile.interests || [])
 
-    // Get progression info
-    const progression = getRankProgression(rank)
-
-    // Upsert cache
+    // Update cache (but don't rely on it - we always recalculate above)
+    // This keeps cache in sync for other systems that might use it
     const { error: upsertError } = await supabase
       .from('user_card_profile')
       .upsert({
@@ -173,11 +146,7 @@ Deno.serve(async (req) => {
       display_name: userProfile.display_name || '',
       avatar_url: userProfile.profile_pic || '',
       bio: userProfile.bio || '',
-      interests: userProfile.interests || [],
-      next_rank_progress: {
-        ...progression,
-        current_friends_in_range: friendsCount - progression.rankRangeMin
-      }
+      interests: userProfile.interests || []
     })
 
   } catch (error) {

@@ -41,7 +41,7 @@ const CLUBS_INTERESTS = [
 ]
 
 /**
- * Determine rank from friends count
+ * Determine rank from following count (number of people user follows)
  */
 export function getRankFromFriendsCount(friendsCount: number): CardRank {
   for (const [rank, range] of Object.entries(RANK_THRESHOLDS)) {
@@ -88,29 +88,5 @@ export function getSuitFromInterests(interests: string[] = []): CardSuit {
   if (counts.diamonds === maxCount) return 'diamonds'
   if (counts.spades === maxCount) return 'spades'
   return 'clubs'
-}
-
-/**
- * Get rank progression info for UI
- */
-export function getRankProgression(currentRank: CardRank): {
-  currentRank: CardRank
-  nextRank: CardRank | null
-  friendsToNextRank: number
-  rankRangeMin: number
-  rankRangeMax: number
-} {
-  const currentRange = RANK_THRESHOLDS[currentRank]
-  const ranks: CardRank[] = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A']
-  const currentIndex = ranks.indexOf(currentRank)
-  const nextRank = currentIndex < ranks.length - 1 ? ranks[currentIndex + 1] : null
-
-  return {
-    currentRank,
-    nextRank,
-    friendsToNextRank: nextRank ? RANK_THRESHOLDS[nextRank].min - currentRange.min : 0,
-    rankRangeMin: currentRange.min,
-    rankRangeMax: currentRange.max === Infinity ? 999999 : currentRange.max
-  }
 }
 

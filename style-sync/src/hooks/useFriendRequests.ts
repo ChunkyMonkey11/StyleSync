@@ -50,6 +50,7 @@ interface UseFriendRequestsReturn {
   sendFriendRequest: (receiverUsername: string) => Promise<void>
   acceptFriendRequest: (requestId: string) => Promise<void>
   declineFriendRequest: (requestId: string) => Promise<void>
+  revokeSentRequest: (requestId: string) => Promise<void>
   removeFriend: (friendId: string) => Promise<void>
   refreshData: () => Promise<void>
 }
@@ -280,6 +281,7 @@ export function useFriendRequests(): UseFriendRequestsReturn {
       setError(error instanceof Error ? error.message : 'Failed to accept friend request')
       
       // Revert optimistic update on error
+      const isFollowBack = requestToAccept.status === 'accepted'
       setReceivedRequests(prev => {
         const exists = prev.some(r => r.id === requestId)
         return exists ? prev : [...prev, requestToAccept]
@@ -328,6 +330,44 @@ export function useFriendRequests(): UseFriendRequestsReturn {
     }
   }, [makeApiCall, refreshData])
 
+  // Revoke a sent friend request
+  const revokeSentRequest = useCallback(async (requestId: string) => {
+    try {
+      setIsLoading(true)
+      setError(null)
+      
+      // Find the request to get receiver_id
+      const requestToRevoke = sentRequests.find(r => r.id === requestId)
+      if (!requestToRevoke) {
+        throw new Error('Request not found')
+      }
+      
+      // Optimistically remove from sentRequests
+      setSentRequests(prev => prev.filter(r => r.id !== requestId))
+      
+      // Use remove-friend endpoint which now handles both pending and accepted requests
+      // Pass the receiver_id as friend_id
+      await makeApiCall('remove-friend', {
+        method: 'POST',
+        body: JSON.stringify({ friend_id: requestToRevoke.receiver_id })
+      })
+      
+      // Refresh data in background to ensure consistency
+      await refreshData()
+      
+    } catch (error) {
+      console.error('Error revoking sent request:', error)
+      setError(error instanceof Error ? error.message : 'Failed to revoke request')
+      
+      // Revert optimistic update on error
+      await refreshData()
+      
+      throw error
+    } finally {
+      setIsLoading(false)
+    }
+  }, [makeApiCall, sentRequests, refreshData])
+
   // Remove friend / Unfollow
   const removeFriend = useCallback(async (friendId: string) => {
     try {
@@ -373,6 +413,7 @@ export function useFriendRequests(): UseFriendRequestsReturn {
     sendFriendRequest,
     acceptFriendRequest,
     declineFriendRequest,
+    revokeSentRequest,
     removeFriend,
     refreshData,
   }

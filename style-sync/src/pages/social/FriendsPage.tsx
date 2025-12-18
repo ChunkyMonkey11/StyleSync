@@ -25,6 +25,7 @@ export function FriendsPage({ onBack }: FriendsPageProps) {
         sendFriendRequest,
         acceptFriendRequest,
         declineFriendRequest,
+        revokeSentRequest,
         removeFriend,
         refreshData
     } = useFriendRequests()
@@ -135,15 +136,15 @@ export function FriendsPage({ onBack }: FriendsPageProps) {
                     ].map((tab) => {
                         const isActive = activeTab === tab.key
                         return (
-                            <button
+                <button
                                 key={tab.key}
                                 onClick={() => setActiveTab(tab.key as any)}
                                 className={`px-4 py-2.5 rounded-xl font-medium text-sm whitespace-nowrap transition-all duration-200 flex items-center gap-1.5 ${
                                     isActive
                                         ? 'bg-white text-purple-600 shadow-lg scale-105' 
                                         : 'bg-white/10 text-white/90 hover:bg-white/20 hover:text-white border border-white/10'
-                                }`}
-                            >
+                    }`}
+                >
                                 <span>{tab.label}</span>
                                 {tab.count !== null && tab.count > 0 && (
                                     <span className={`px-1.5 py-0.5 rounded-full text-xs font-semibold ${
@@ -154,7 +155,7 @@ export function FriendsPage({ onBack }: FriendsPageProps) {
                                         {tab.count}
                                     </span>
                                 )}
-                            </button>
+                </button>
                         )
                     })}
                 </div>
@@ -175,7 +176,8 @@ export function FriendsPage({ onBack }: FriendsPageProps) {
                                     value={friendUsername}
                                     onChange={(e) => setFriendUsername(e.target.value)}
                                     placeholder="@username"
-                                    className="w-full text-base"
+                                    className="w-full text-base text-gray-900"
+                                    style={{ color: '#111827' }}
                                     onKeyPress={(e) => {
                                         if (e.key === 'Enter' && friendUsername.trim() && !isSubmitting) {
                                             handleSendRequest()
@@ -250,15 +252,31 @@ export function FriendsPage({ onBack }: FriendsPageProps) {
                                                 </p>
                                             </div>
                                             
-                                            <span className={`text-xs font-semibold px-3 py-1.5 rounded-full flex-shrink-0 capitalize ${
+                                            <div className="flex items-center gap-2 flex-shrink-0">
+                                                <span className={`text-xs font-semibold px-3 py-1.5 rounded-full capitalize ${
                                                 request.status === 'pending' 
-                                                    ? 'bg-amber-100 text-amber-700' 
+                                                        ? 'bg-amber-100 text-amber-700' 
                                                     : request.status === 'accepted'
-                                                    ? 'bg-emerald-100 text-emerald-700'
-                                                    : 'bg-gray-100 text-gray-600'
+                                                        ? 'bg-emerald-100 text-emerald-700'
+                                                        : 'bg-gray-100 text-gray-600'
                                             }`}>
                                                 {request.status}
                                             </span>
+                                                {request.status === 'pending' && (
+                                                    <button
+                                                        onClick={async () => {
+                                                            try {
+                                                                await revokeSentRequest(request.id)
+                                                            } catch (error) {
+                                                                // Error is handled by the hook
+                                                            }
+                                                        }}
+                                                        className="px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 text-xs font-semibold rounded-lg active:scale-95 transition-all duration-200 whitespace-nowrap"
+                                                    >
+                                                        Revoke
+                                                    </button>
+                                                )}
+                                            </div>
                                         </div>
                                     )
                                 })}
@@ -321,11 +339,11 @@ export function FriendsPage({ onBack }: FriendsPageProps) {
                                             className="p-5 hover:bg-gray-50/50 transition-colors"
                                         >
                                             <div className="flex items-center gap-4 mb-4">
-                                                {/* Avatar */}
-                                                {profilePic ? (
-                                                    <img
-                                                        src={profilePic}
-                                                        alt={username}
+                                            {/* Avatar */}
+                                            {profilePic ? (
+                                                <img
+                                                    src={profilePic}
+                                                    alt={username}
                                                         className="w-16 h-16 rounded-full object-cover border-2 border-gray-200 shadow-md flex-shrink-0"
                                                     />
                                                 ) : (
@@ -625,7 +643,7 @@ export function FriendsPage({ onBack }: FriendsPageProps) {
                                                     <button
                                                         onClick={() => handleRemoveFriend(follower.user_id)}
                                                         className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-semibold rounded-xl active:scale-95 transition-all duration-200 whitespace-nowrap"
-                                                    >
+                                                >
                                                         Unfollow
                                                     </button>
                                                 )}

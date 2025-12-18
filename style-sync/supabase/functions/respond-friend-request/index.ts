@@ -8,6 +8,7 @@ import { createClient } from 'jsr:@supabase/supabase-js@2'
 import { corsHeaders, handleCors } from '../_shared/cors.ts'
 import { verifyJWT, extractBearerToken } from '../_shared/jwt-utils.ts'
 import { errorResponse, successResponse, requireMethod } from '../_shared/responses.ts'
+import { invalidateCardProfileCache } from '../_shared/card-cache.ts'
 
 interface RespondFriendRequestBody {
   request_id: string
@@ -212,6 +213,13 @@ Deno.serve(async (req) => {
               return errorResponse('Failed to follow back', 500)
             }
             
+            // Invalidate card profile cache - following count changed
+            const supabaseUrl = Deno.env.get('SUPABASE_URL')
+            const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+            if (supabaseUrl && supabaseKey) {
+              await invalidateCardProfileCache(supabaseUrl, supabaseKey, currentUser.id)
+            }
+            
             return successResponse({
               request: updatedReverse,
               message: 'Follow back successful'
@@ -234,6 +242,13 @@ Deno.serve(async (req) => {
           if (createReverseError) {
             console.error('Error creating reverse request:', createReverseError)
             return errorResponse('Failed to follow back', 500)
+          }
+          
+          // Invalidate card profile cache - following count changed
+          const supabaseUrl = Deno.env.get('SUPABASE_URL')
+          const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+          if (supabaseUrl && supabaseKey) {
+            await invalidateCardProfileCache(supabaseUrl, supabaseKey, currentUser.id)
           }
           
           return successResponse({

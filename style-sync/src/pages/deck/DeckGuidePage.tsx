@@ -29,7 +29,6 @@ export function DeckGuidePage({ onBack }: DeckGuidePageProps) {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [showBreakdown, setShowBreakdown] = useState(false)
 
   useEffect(() => {
     fetchCardProfile()
@@ -42,6 +41,11 @@ export function DeckGuidePage({ onBack }: DeckGuidePageProps) {
       
       // Fetch card profile
       const cardData = await getCardProfile()
+      console.log('🎴 Card Profile Response (Deck Guide):', {
+        rank: cardData.rank,
+        friends_count: cardData.friends_count,
+        suit: cardData.suit
+      })
       setCardProfile(cardData)
       
       // Also fetch regular profile for interests (as fallback)
@@ -112,7 +116,6 @@ export function DeckGuidePage({ onBack }: DeckGuidePageProps) {
 
   const currentRank = cardProfile?.rank || '2'
   const currentSuit = cardProfile?.suit || 'hearts'
-  const progression = cardProfile?.next_rank_progress
 
   return (
     <div className="min-h-screen p-4 max-w-md mx-auto pb-8">
@@ -215,65 +218,6 @@ export function DeckGuidePage({ onBack }: DeckGuidePageProps) {
           })}
         </div>
       </div>
-
-      {/* How to Level Up */}
-      {progression && progression.nextRank && (
-        <div className="mb-8">
-          <h3 className="text-xl font-bold text-white mb-4">How to Level Up</h3>
-          <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4 border border-white/20">
-            <div className="mb-4">
-              <div className="flex justify-between text-sm text-white/80 mb-2">
-                <span>Progress to {progression.nextRank}</span>
-                <span>
-                  {progression.current_friends_in_range} / {progression.friendsToNextRank} friends
-                </span>
-              </div>
-              <div className="w-full bg-white/20 rounded-full h-2">
-                <div
-                  className="bg-purple-500 h-2 rounded-full transition-all"
-                  style={{
-                    width: `${Math.min(100, (progression.current_friends_in_range / progression.friendsToNextRank) * 100)}%`
-                  }}
-                />
-              </div>
-            </div>
-            <div className="space-y-2 text-white/90 text-sm">
-              <div className="flex items-center gap-2">
-                <span>✓</span>
-                <span>Add friends to climb ranks</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Score Breakdown */}
-      {cardProfile && (
-        <div className="mb-8">
-          <button
-            onClick={() => setShowBreakdown(!showBreakdown)}
-            className="w-full text-left p-4 bg-white/10 backdrop-blur-sm rounded-lg border border-white/20 text-white font-semibold flex items-center justify-between"
-          >
-            <span>How it's calculated</span>
-            <span>{showBreakdown ? '−' : '+'}</span>
-          </button>
-          {showBreakdown && (
-            <div className="mt-2 p-4 bg-white/5 rounded-lg border border-white/10 text-white text-sm space-y-2">
-              <div className="flex justify-between">
-                <span>Friends Count</span>
-                <span className="font-bold">{cardProfile.friends_count}</span>
-              </div>
-              <div className="text-white/70 text-xs mt-2">
-                Rank is determined by your total number of accepted friends.
-              </div>
-              <div className="flex justify-between font-bold mt-2 pt-2 border-t border-white/20">
-                <span>Current Rank</span>
-                <span>{cardProfile.rank} - {RANK_LABELS[cardProfile.rank]}</span>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
     </div>
   )
 }

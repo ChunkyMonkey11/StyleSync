@@ -129,7 +129,11 @@ Deno.serve(async (req) => {
     // ============================================
     // STEP 7: FORMAT RESPONSE
     // ============================================
-    const followingList = (following || []).map(request => ({
+    // Filter out records where receiver_profile is null (orphaned records from deleted users)
+    // Only count valid follows where the receiver still exists
+    const validFollowing = (following || []).filter(request => request.receiver_profile !== null)
+    
+    const followingList = validFollowing.map(request => ({
       id: request.id,
       user_id: request.receiver_id,
       shop_public_id: request.receiver_profile.shop_public_id,

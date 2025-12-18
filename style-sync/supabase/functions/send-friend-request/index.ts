@@ -8,6 +8,7 @@ import { createClient } from 'jsr:@supabase/supabase-js@2'
 import { corsHeaders, handleCors } from '../_shared/cors.ts'
 import { verifyJWT, extractBearerToken } from '../_shared/jwt-utils.ts'
 import { errorResponse, successResponse, requireMethod } from '../_shared/responses.ts'
+import { invalidateCardProfileCache } from '../_shared/card-cache.ts'
 
 interface SendFriendRequestBody {
   receiver_username: string
@@ -225,7 +226,19 @@ Deno.serve(async (req) => {
     }
     
     // ============================================
-    // STEP 11: RETURN SUCCESS
+    // STEP 11: INVALIDATE CARD PROFILE CACHE IF REQUEST WAS ACCEPTED
+    // ============================================
+    // If the request was immediately accepted (public profile), following count changed
+    if (result.status === 'accepted') {
+      const supabaseUrl = Deno.env.get('SUPABASE_URL')
+      const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+      if (supabaseUrl && supabaseKey) {
+        await invalidateCardProfileCache(supabaseUrl, supabaseKey, currentUser.id)
+      }
+    }
+    
+    // ============================================
+    // STEP 12: RETURN SUCCESS
     // ============================================
     return successResponse({
       request: result,

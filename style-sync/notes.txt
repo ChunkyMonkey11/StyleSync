@@ -1,7 +1,0 @@
-1. Run the sync
-2.Scroll on shop
-3. Check if personalized recs are tuff.
-  If it doesnt work debug it. Then keep trying.
-
-4. Set up adding friends. But disanle the syncing of friends just handle adding, 
-- Debug: Profile edit screen now has a temporary `Clear Auth (Debug)` button when `import.meta.env.MODE !== 'production'`. It calls `clearAuth()` to reset JWT cache so create-profile updates work if tokens get stuck. MUST remove before prod deploy.

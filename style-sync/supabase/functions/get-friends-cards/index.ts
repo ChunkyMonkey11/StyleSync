@@ -158,76 +158,85 @@ Deno.serve(async (req) => {
     // ============================================
     const friendCards = await Promise.all(
       friends.map(async (friend) => {
-        // Check cache
-        const { data: cachedProfile } = await supabase
-          .from('user_card_profile')
-          .select('*')
+        // Get friend's profile first (needed for cache validation and recalculation)
+        const { data: friendProfile, error: profileError } = await supabase
+          .from('userprofiles')
+          .select('id, interests')
           .eq('shop_public_id', friend.shop_public_id)
           .single()
 
-        const now = new Date()
-        const cacheExpiry = cachedProfile?.computed_at
-          ? new Date(new Date(cachedProfile.computed_at).getTime() + CACHE_DURATION_HOURS * 60 * 60 * 1000)
-          : null
-
-        let rank: CardRank
-        let suit: CardSuit
-        let friendsCount: number
-
-        // Use cached if valid
-        if (cachedProfile && cacheExpiry && now < cacheExpiry) {
-          rank = cachedProfile.rank as CardRank
-          suit = cachedProfile.suit as CardSuit
-          friendsCount = cachedProfile.friends_count
-        } else {
-          // Compute fresh profile
-          console.log(`Computing fresh card profile for friend: ${friend.shop_public_id}`)
-
-          // Get friend's profile with interests
-          const { data: friendProfile, error: profileError } = await supabase
-            .from('userprofiles')
-            .select('id, interests')
-            .eq('shop_public_id', friend.shop_public_id)
-            .single()
-
-          if (profileError || !friendProfile) {
-            console.error(`Error fetching friend profile for ${friend.shop_public_id}:`, profileError)
-            // Default values if profile fetch fails
-            rank = '2'
-            suit = 'hearts'
-            friendsCount = 0
-          } else {
-            // Get friend's friends count
-            const { data: friendFriendships } = await supabase
-              .from('friend_requests')
-              .select('id')
-              .eq('status', 'accepted')
-              .or(`sender_id.eq.${friendProfile.id},receiver_id.eq.${friendProfile.id}`)
-
-            friendsCount = friendFriendships?.length || 0
-
-            // Compute rank
-            rank = getRankFromFriendsCount(friendsCount)
-
-            // Compute suit from interests
-            suit = getSuitFromInterests(friendProfile.interests || [])
-
-            // Upsert cache
-            await supabase
-              .from('user_card_profile')
-              .upsert({
-                user_id: friendProfile.id,
-                shop_public_id: friend.shop_public_id,
-                rank,
-                suit,
-                friends_count: friendsCount,
-                computed_at: new Date().toISOString(),
-                version: 1
-              }, {
-                onConflict: 'user_id'
-              })
+        if (profileError || !friendProfile) {
+          console.error(`Error fetching friend profile for ${friend.shop_public_id}:`, profileError)
+          // Return default values if profile fetch fails
+          return {
+            userId: friend.shop_public_id,
+            username: friend.username,
+            displayName: friend.display_name || friend.username,
+            avatarUrl: friend.profile_pic || null,
+            bio: friend.bio || '',
+            interests: friend.interests || [],
+            rank: '2' as CardRank,
+            suit: 'hearts' as CardSuit,
+            stats: {
+              friendsCount: 0
+            }
           }
         }
+
+        // ALWAYS recalculate - disable cache temporarily to ensure 100% accuracy
+        // TODO: Re-enable cache once we verify this works correctly
+        console.log(`🔄 Always recalculating card profile for friend (cache disabled): ${friend.shop_public_id}`)
+        
+        // Get friend's following count (how many people this friend follows)
+        // Use exact same query as get-card-profile to ensure consistent counting
+        // Filter out any records where receiver_profile is null (orphaned records)
+        const { data: friendFriendships } = await supabase
+          .from('friend_requests')
+          .select(`
+            id,
+            receiver_id,
+            created_at,
+            receiver_profile:userprofiles!friend_requests_receiver_id_fkey(
+              id,
+              username,
+              display_name,
+              profile_pic,
+              shop_public_id
+            )
+          `)
+          .eq('status', 'accepted')
+          .eq('sender_id', friendProfile.id)  // Only count people this friend follows
+
+        // Filter out any records with null receiver_profile (same as get-following does)
+        const validFriendFriendships = (friendFriendships || []).filter(f => {
+          if (!f.receiver_profile) {
+            console.log(`⚠️ Filtering out orphaned follow for friend ${friend.shop_public_id}:`, f.id)
+            return false
+          }
+          return true
+        })
+        const friendsCount = validFriendFriendships.length
+
+        // Compute rank
+        const rank = getRankFromFriendsCount(friendsCount)
+
+        // Compute suit from interests
+        const suit = getSuitFromInterests(friendProfile.interests || [])
+
+        // Update cache (but don't rely on it - we always recalculate above)
+        await supabase
+          .from('user_card_profile')
+          .upsert({
+            user_id: friendProfile.id,
+            shop_public_id: friend.shop_public_id,
+            rank,
+            suit,
+            friends_count: friendsCount,
+            computed_at: new Date().toISOString(),
+            version: 1
+          }, {
+            onConflict: 'user_id'
+          })
 
         return {
           userId: friend.shop_public_id,

@@ -8,6 +8,7 @@ import { createClient } from 'jsr:@supabase/supabase-js@2'
 import { corsHeaders, handleCors } from '../_shared/cors.ts'
 import { verifyJWT, extractBearerToken } from '../_shared/jwt-utils.ts'
 import { errorResponse, successResponse, requireMethod } from '../_shared/responses.ts'
+import { invalidateCardProfileCache } from '../_shared/card-cache.ts'
 
 interface RemoveFriendRequestBody {
   friend_id: string // UUID of the friend to remove
@@ -140,14 +141,16 @@ Deno.serve(async (req) => {
     // ============================================
     // STEP 8: FIND FOLLOW REQUEST (where you're the sender)
     // ============================================
-    // For Instagram-style following: unfollow only removes your follow (A→B)
+    // Can be used to:
+    // 1. Unfollow (if status is 'accepted') - removes your follow
+    // 2. Revoke sent request (if status is 'pending') - cancels pending request
     // It doesn't remove their follow of you (B→A) if it exists
     const { data: followingRequest, error: followingError } = await supabase
       .from('friend_requests')
-      .select('id')
+      .select('id, status')
       .eq('sender_id', currentUser.id)
       .eq('receiver_id', friendUser.id)
-      .eq('status', 'accepted')
+      .in('status', ['accepted', 'pending'])
       .maybeSingle()
     
     if (followingError) {
@@ -156,12 +159,13 @@ Deno.serve(async (req) => {
     }
     
     if (!followingRequest) {
-      return errorResponse('You are not following this user', 404)
+      return errorResponse('No request found to remove', 404)
     }
     
     // ============================================
-    // STEP 9: DELETE FOLLOW REQUEST (UNFOLLOW)
+    // STEP 9: DELETE FOLLOW REQUEST
     // ============================================
+    // Delete the request (works for both 'accepted' and 'pending' status)
     const { error: deleteError } = await supabase
       .from('friend_requests')
       .delete()
@@ -169,14 +173,31 @@ Deno.serve(async (req) => {
     
     if (deleteError) {
       console.error('Error deleting follow request:', deleteError)
-      return errorResponse('Failed to unfollow user', 500)
+      const action = followingRequest.status === 'accepted' ? 'unfollow' : 'revoke request'
+      return errorResponse(`Failed to ${action}`, 500)
     }
     
     // ============================================
-    // STEP 10: RETURN SUCCESS
+    // STEP 10: INVALIDATE CARD PROFILE CACHE
     // ============================================
+    // Following count changed, so card profile needs to be recalculated
+    if (followingRequest.status === 'accepted') {
+      const supabaseUrl = Deno.env.get('SUPABASE_URL')
+      const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+      if (supabaseUrl && supabaseKey) {
+        await invalidateCardProfileCache(supabaseUrl, supabaseKey, currentUser.id)
+      }
+    }
+    
+    // ============================================
+    // STEP 11: RETURN SUCCESS
+    // ============================================
+    const successMessage = followingRequest.status === 'accepted' 
+      ? 'Unfollowed successfully' 
+      : 'Request revoked successfully'
+    
     return successResponse({
-      message: 'Unfollowed successfully'
+      message: successMessage
     })
 
   } catch (error) {

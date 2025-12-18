@@ -54,7 +54,7 @@ export function FriendPokerCard({ card, onClick, isGrid = false }: FriendPokerCa
           )}
           {card.stats?.friendsCount !== undefined && (
             <div className="text-white text-xs mt-2 opacity-75">
-              {card.stats.friendsCount} friend{card.stats.friendsCount !== 1 ? 's' : ''}
+              Following {card.stats.friendsCount}
             </div>
           )}
         </div>
