@@ -17,7 +17,6 @@ export function FriendFeedPage({ friendCard, onBack }: FriendFeedPageProps) {
   // Use the userId (which is actually shop_public_id from backend) for the feed
   const { products, followedShops, isLoading, error, hasMore, fetchMore } = useFriendFeed(friendCard.userId)
   const [friendProfile, setFriendProfile] = useState<FriendProfileData | null>(null)
-  const [isLoadingProfile, setIsLoadingProfile] = useState(true)
   const observerRef = useRef<IntersectionObserver | null>(null)
   const loadMoreRef = useRef<HTMLDivElement>(null)
 
@@ -27,7 +26,6 @@ export function FriendFeedPage({ friendCard, onBack }: FriendFeedPageProps) {
       bio: friendCard.bio || '',
       interests: friendCard.interests || []
     })
-    setIsLoadingProfile(false)
   }, [friendCard.bio, friendCard.interests])
 
   // Infinite scroll setup

@@ -49,6 +49,7 @@ export function App() {
       
       return () => clearTimeout(timer)
     }
+    return undefined
   }, [isInitializing, error, animationStartTime])
 
   const handleProfileComplete = () => {

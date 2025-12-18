@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useCurrentUser, Button, Input, Card, Image } from '@shopify/shop-minis-react'
+import { useCurrentUser, Image, Input } from '@shopify/shop-minis-react'
 import { useAuth } from '../../hooks/useAuth'
 
 interface OnboardingPageProps {

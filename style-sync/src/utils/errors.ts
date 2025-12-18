@@ -31,7 +31,7 @@ export class AuthenticationError extends ApiError {
     this.name = 'AuthenticationError'
   }
 
-  static fromResponse(statusCode: number, errorText?: string): AuthenticationError {
+  static fromResponse(_statusCode: number, errorText?: string): AuthenticationError {
     const message = errorText || 'Your session has expired. Please refresh the page.'
     return new AuthenticationError(message)
   }

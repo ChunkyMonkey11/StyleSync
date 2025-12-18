@@ -76,7 +76,7 @@ export function useAppInitialization(): UseAppInitializationReturn {
     try {
       // Step 1: Authentication - Get JWT token and public ID
       console.log('🔐 Step 1: Authenticating...')
-      const token = await getValidToken()
+      await getValidToken()
       console.log('✅ Authentication complete')
 
       // Wait a moment for authData to be set (it's set asynchronously)

@@ -12,9 +12,6 @@ const API_BASE_URL = 'https://fhyisvyhahqxryanjnby.supabase.co/functions/v1'
 const MAX_RETRIES = 3
 const RETRY_DELAYS = [1000, 2000, 4000] // Exponential backoff: 1s, 2s, 4s
 
-// Status codes that should trigger retry
-const RETRYABLE_STATUS_CODES = [401, 429, 500, 502, 503, 504]
-
 interface ApiClientOptions {
   retries?: number
   retryDelay?: number

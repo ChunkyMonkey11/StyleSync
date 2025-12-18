@@ -156,15 +156,6 @@ export function MainApp() {
         refreshData()
     }, [refreshData])
 
-    // Debug: Log received requests count
-    useEffect(() => {
-        console.log('[MainApp] Received requests:', {
-            count: receivedRequests?.length || 0,
-            requests: receivedRequests,
-            isEmpty: !receivedRequests || receivedRequests.length === 0
-        })
-    }, [receivedRequests])
-
     // ============================================
     // STATE MANAGEMENT
     // ============================================

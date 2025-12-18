@@ -16,7 +16,7 @@ interface PokerCardPreviewProps {
 
 export function PokerCardPreview({
   username,
-  displayName,
+  displayName: _displayName,
   avatarUrl,
   bio,
   rank,

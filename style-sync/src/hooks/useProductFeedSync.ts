@@ -7,7 +7,6 @@ import {
   useFollowedShops,
   useRecommendedProducts
 } from '@shopify/shop-minis-react'
-import { useAuth } from './useAuth'
 import { apiRequestJson } from '../utils/apiClient'
 
 const INITIAL_PAGE_SIZE = 20
