@@ -114,6 +114,7 @@ StyleSync is a social shopping app that helps users discover and share style wit
   - Check that Developer Mode is enabled if testing locally
   - Verify network connectivity
 - Contact information:
+  -revant.h.patel@gmail.com
   - For technical issues, refer to the repository documentation
 
 ---
@@ -193,7 +194,33 @@ StyleSync is a social shopping app that helps users discover and share style wit
    - Deploy frontend to hosting (Vercel, Netlify, etc.)
    - Get production URL
 
-4. **Submit via Shopify Partner Dashboard**
+4. **Privacy Policy & Terms of Service** ✅ CREATED
+   - ✅ Privacy Policy created: `PRIVACY_POLICY.md`
+   - ✅ Terms of Service created: `TERMS_OF_SERVICE.md`
+   - ⚠️ **Next Steps:**
+     - Host these documents publicly (you don't own stylesync.com, so use one of these options):
+       - Option 1: Create a simple GitHub Pages site
+       - Option 2: Host on your deployed frontend (add `/privacy` and `/terms` routes)
+       - Option 3: Use a free hosting service (Netlify, Vercel) with a subdomain
+       - Option 4: Use a simple static hosting service
+     - Update `manifest.json` with the actual URLs once hosted
+     - Add links to Privacy Policy and Terms in your app UI (Settings or About page)
+
+5. **User Data Rights Implementation** ⚠️ REQUIRED
+   - Add "Delete Account" or "Request Data Deletion" feature in app
+   - Add contact method for data requests (email: revant.h.patel@gmail.com)
+   - Ensure users can modify their data (already have edit profile)
+   - Document data retention policy
+
+6. **Compliance Verification**
+   - ✅ No fees charged to Shop Users (compliant)
+   - ✅ No targeted advertising (verify you're not doing this)
+   - ✅ No third-party analytics/tracking (verify compliance)
+   - ✅ Data security practices in place (Supabase handles this)
+   - ⚠️ Privacy Policy accessible from app (add link)
+   - ⚠️ Terms of Service accessible from app (add link)
+
+7. **Submit via Shopify Partner Dashboard**
    - Go to Partner Dashboard → Shop Minis
    - Create/Edit your Mini
    - Fill in:
@@ -203,6 +230,6 @@ StyleSync is a social shopping app that helps users discover and share style wit
      - Description: (from top of this file)
      - Testing Instructions: (copy from section above)
      - Demo Video URL: (your recorded video link)
-     - Privacy Policy URL: (must be accessible)
+     - Privacy Policy URL: (must be accessible and compliant)
      - Terms URL: (must be accessible)
    - Submit for review

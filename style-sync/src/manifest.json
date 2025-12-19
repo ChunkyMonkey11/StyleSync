@@ -12,7 +12,7 @@
     "shops:follows:read"
   ],
   "handle": "stylesync",
-  "privacy_policy_url": "https://www.stylesync.com/privacy",
-  "terms_url": "https://www.stylesync.com/terms",
+  "privacy_policy_url": "https://chunkymonkey11.github.io/StyleSync/privacy.html",
+  "terms_url": "https://chunkymonkey11.github.io/StyleSync/terms.html",
   "trusted_domains": ["fhyisvyhahqxryanjnby.supabase.co"]
 }
