@@ -1,0 +1,208 @@
+StyleSync is a social shopping app that helps users discover and share style with friends. Users create personalized profiles with style interests, follow friends to see their product feeds, and discover new styles through a social network. The app features a unique poker card system where each friend gets a card representing their style profile, making the social shopping experience fun and engaging.
+
+
+1. Clone the repository
+2. Navigate to `style-sync` folder
+3. Run `npm install`
+4. Run `npm start`
+5. Scan the QR code shown in terminal with Shop app
+6. Tap "StyleSync" mini in Shop app
+7. Test the app!
+
+**Note:** Backend is already configured - no setup needed.
+
+---
+
+## Shopify App Submission - Testing Instructions
+
+### 1. App Purpose
+- This Shop Mini does: StyleSync is a social shopping app that helps users discover and share style with friends through personalized profiles, friend connections, and product feeds from shops they follow.
+- Supported flows to test:
+  - User onboarding and profile creation
+  - Friend discovery and connection management
+  - Product feed discovery from followed friends
+  - Profile editing and card system exploration
+
+### 2. Installation and Onboarding Steps
+- **No installation required** - StyleSync is a Shop Mini accessed directly through the Shop app
+- To access StyleSync:
+  1. Open Shop app on iOS or Android device
+  2. Navigate to Shop Minis section
+  3. Tap on "StyleSync" mini
+  4. If first-time user, complete onboarding:
+     - Enter username (lowercase, numbers, underscores only)
+     - Add bio (optional)
+     - Select style interests (Fashion, Streetwear, Vintage, etc.)
+     - Choose gender preference (optional)
+     - Set profile visibility (Public/Private)
+     - Tap "Complete Setup"
+  5. After onboarding, you'll see the main dashboard with your profile picture, Feeds Deck button, and Friends icon
+
+### 3. Test Credentials
+- **No external account required** - StyleSync uses Shopify Shop app authentication
+- Users authenticate automatically through their Shop app account
+- Each Shop app user account can test independently
+- Backend is pre-configured and requires no additional setup
+
+### 4. Key Test Flows
+
+**Flow A – Onboarding and Profile Creation**
+- Steps:
+  1. Open StyleSync mini in Shop app (first time)
+  2. Complete onboarding form with username, bio, interests
+  3. Select gender and profile visibility settings
+  4. Tap "Complete Setup"
+- Expected result:
+  - Profile is created successfully
+  - User is redirected to main dashboard
+  - Profile picture displays at top with username
+  - Feeds Deck button and Friends icon are visible
+
+**Flow B – Friend Discovery and Connection**
+- Steps:
+  1. Tap Friends icon on main dashboard
+  2. Go to "Discover" tab to see public profiles
+  3. Tap "Follow" on a public profile
+  4. Go to "Send" tab and enter a username to send friend request
+  5. Go to "Received" tab to see incoming requests
+  6. Tap "Accept" on a friend request
+- Expected result:
+  - Friend requests are sent successfully
+  - Received requests appear with sender info
+  - Accepted friends appear in "Mutual" tab
+  - Badge count updates on main dashboard
+
+**Flow C – Feeds Deck and Product Discovery**
+- Steps:
+  1. Tap Feeds Deck button on main dashboard
+  2. Observe dealing animation
+  3. View friend cards in grid/list view
+  4. Use search to filter friends
+  5. Tap on a friend's card
+  6. Scroll through their product feed
+  7. Tap on a product to view in shop
+- Expected result:
+  - Smooth dealing animation plays
+  - Friend cards display with profile pictures, usernames, ranks, and suits
+  - Search filters cards correctly
+  - Friend feed shows their card, followed shops, and products
+  - Products link to Shopify stores correctly
+
+**Flow D – Profile Management**
+- Steps:
+  1. Tap profile picture on main dashboard
+  2. View your StyleSync card with rank and suit
+  3. Tap "View Deck Guide" to see ranking system
+  4. Tap "Edit Profile" to modify bio, interests, settings
+  5. Save changes
+- Expected result:
+  - Profile page displays card with current rank/suit
+  - Deck Guide shows all ranks (2-Ace) and suits (Spades, Hearts, Diamonds, Clubs)
+  - Profile edits save successfully
+  - Changes reflect immediately in profile view
+
+### 5. Storefront Performance
+- **Not applicable** - StyleSync is a Shop Mini that runs within the Shop app WebView
+- Does not affect Shopify storefront performance
+- All functionality is contained within the Shop app environment
+
+### 6. Notes
+- Backend API is pre-configured - no setup required
+- All API calls authenticate automatically through Shop app tokens
+- If you encounter any issues during testing:
+  - Ensure you're using the latest version of Shop app
+  - Check that Developer Mode is enabled if testing locally
+  - Verify network connectivity
+- Contact information:
+  - For technical issues, refer to the repository documentation
+
+---
+
+## Demo Video Script (2-3 minutes)
+
+### Opening (0:00-0:15)
+- "Welcome to StyleSync - a social shopping app where your style meets your social circle."
+- Show Shop app opening StyleSync mini
+
+### Onboarding (0:15-0:45)
+- Show onboarding form
+- Fill in username, bio, select interests
+- Complete setup
+- "Users create personalized profiles with their style interests"
+
+### Main Features (0:45-1:30)
+- Show main dashboard
+- "Tap the Feeds Deck to discover products from friends"
+- Show dealing animation
+- "Each friend gets a poker card representing their style profile"
+- Tap friend card, show product feed
+- "See products from shops your friends follow"
+
+### Friends & Social (1:30-2:00)
+- Show Friends page
+- "Discover public profiles, send friend requests, manage your connections"
+- Show accepting a friend request
+- "Build your style network"
+
+### Profile & Cards (2:00-2:15)
+- Show profile page with card
+- "Your rank and suit represent your style status"
+- Show Deck Guide briefly
+- "Level up as you grow your network"
+
+### Closing (2:15-2:30)
+- "StyleSync - discover style through your social circle"
+- Show main dashboard one more time
+- Fade out
+
+### Video Requirements:
+- Record on actual mobile device (iOS/Android)
+- Show complete onboarding flow
+- Demonstrate at least 2-3 core features
+- Keep it under 3 minutes
+- Upload as unlisted YouTube or shareable link
+
+---
+
+## Submission Checklist
+
+### ✅ Completed
+- [x] manifest.json configured
+- [x] Description written
+- [x] Testing instructions provided (above)
+- [x] Demo video script created (above)
+- [x] Scopes configured
+- [x] Icon/assets ready
+- [x] Trusted domains set
+
+### ⚠️ Need to Complete
+
+1. **Record Demo Video**
+   - Use script above
+   - Record on mobile device
+   - Upload to YouTube (unlisted) or shareable link
+   - Add URL to submission form
+
+2. **Privacy Policy & Terms**
+   - Current URLs in manifest.json:
+     - Privacy: `https://www.stylesync.com/privacy`
+     - Terms: `https://www.stylesync.com/terms`
+   - **Action:** Create these pages OR update URLs to existing pages
+
+3. **Build & Deploy**
+   - Deploy frontend to hosting (Vercel, Netlify, etc.)
+   - Get production URL
+
+4. **Submit via Shopify Partner Dashboard**
+   - Go to Partner Dashboard → Shop Minis
+   - Create/Edit your Mini
+   - Fill in:
+     - Name: StyleSync
+     - Handle: stylesync
+     - URL: Your deployed frontend URL
+     - Description: (from top of this file)
+     - Testing Instructions: (copy from section above)
+     - Demo Video URL: (your recorded video link)
+     - Privacy Policy URL: (must be accessible)
+     - Terms URL: (must be accessible)
+   - Submit for review

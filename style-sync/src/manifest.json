@@ -1,0 +1,18 @@
+{
+  "name": "StyleSync",
+  "description": "A social shopping app that helps you discover and share style with friends",
+  "permissions": [],
+  "scopes": [
+    "user_settings:read",
+    "openid",
+    "orders",
+    "product_list:read",
+    "products:recent:read",
+    "products:recommendations:read",
+    "shops:follows:read"
+  ],
+  "handle": "stylesync",
+  "privacy_policy_url": "https://www.stylesync.com/privacy",
+  "terms_url": "https://www.stylesync.com/terms",
+  "trusted_domains": ["fhyisvyhahqxryanjnby.supabase.co"]
+}

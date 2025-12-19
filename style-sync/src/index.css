@@ -1,0 +1,110 @@
+@import "tailwindcss";
+@import "@shopify/shop-minis-react/styles";
+
+:root {
+  /* colors matching the image - deep purple to dark indigo */
+  --bg-start: #7c3aed; /* deep purple (purple-600) */
+  --bg-mid1:  #6d28d9; /* darker purple (purple-700) */
+  --bg-mid2:  #5b21b6; /* deep purple (purple-800) */
+  --bg-end:   #4c1d95; /* very dark purple-indigo (purple-900) */
+}
+
+/* Full-page background */
+/* Start with loading screen background to prevent flash */
+body {
+  margin: 0;
+  min-height: 100vh;
+  background-color: #faf8ff; /* Match LoadingScreen background initially */
+  color: #ffffff;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+/* Apply purple gradient when app is loaded */
+body.app-loaded {
+  background:
+    /* subtle glow from the top-left corner */
+    radial-gradient(120% 120% at 0% 0%,
+      #9333ea 0%,
+      var(--bg-start) 35%,
+      transparent 70%
+    ),
+    /* main diagonal gradient */
+    linear-gradient(
+      115deg,
+      var(--bg-start) 0%,
+      var(--bg-mid1) 25%,
+      var(--bg-mid2) 60%,
+      var(--bg-end) 100%
+    );
+  background-color: #1e1b4b;   /* dark indigo fallback */
+  background-attachment: fixed; /* makes it feel seamless while scrolling */
+}
+
+#root {
+  min-height: 100vh;
+}
+
+/* Hide scrollbar while maintaining scroll functionality */
+.scrollbar-hide {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;  /* Chrome, Safari, Opera */
+}
+
+/* Onboarding page animations */
+@keyframes waterfall {
+  0% {
+    transform: translateY(0%) scale(0.9);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-200%) scale(0.9);
+    opacity: 0;
+  }
+}
+
+@keyframes drift {
+  0%, 100% { transform: translateX(0px); }
+  25% { transform: translateX(-8px); }
+  50% { transform: translateX(6px); }
+  75% { transform: translateX(-4px); }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  25% { transform: translateY(-8px) rotate(1deg); }
+  50% { transform: translateY(-4px) rotate(-1deg); }
+  75% { transform: translateY(-12px) rotate(0.5deg); }
+}
+
+@keyframes bubblePop {
+  0% { transform: scale(1) rotate(0deg); }
+  50% { transform: scale(1.3) rotate(180deg); }
+  100% { transform: scale(1) rotate(360deg); }
+}
+
+.animate-waterfall {
+  animation: waterfall 6s linear infinite;
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+.animate-bubble-pop {
+  animation: bubblePop 0.6s ease-out;
+}
+
+.bubble-hover:hover {
+  animation-play-state: paused;
+  transform: translateY(-4px) scale(1.05);
+}
