@@ -592,7 +592,7 @@ export function FriendsPage({ onBack }: FriendsPageProps) {
                                     return (
                                         <div 
                                             key={follower.id} 
-                                            className="flex items-center gap-4 p-4 hover:bg-gray-50/50 transition-colors"
+                                            className="flex items-center gap-3 p-4 hover:bg-gray-50/50 transition-colors"
                                         >
                                             {/* Avatar */}
                                             {follower.user_profile.profile_pic ? (
@@ -610,21 +610,23 @@ export function FriendsPage({ onBack }: FriendsPageProps) {
                                             )}
                                             
                                             {/* Name and Display Name */}
-                                            <div className="flex-1 min-w-0">
-                                                <p className="font-bold text-gray-900 truncate text-base">
+                                            <div className="flex-1">
+                                                <p className="font-bold text-gray-900 text-base break-words">
                                                     {follower.user_profile.display_name}
                                                 </p>
-                                                <p className="text-sm text-gray-500 truncate mt-0.5">
-                                                    @{follower.user_profile.username}
+                                                <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                                                    <p className="text-sm text-gray-500 break-words">
+                                                        @{follower.user_profile.username}
+                                                    </p>
                                                     {isFollowing && (
-                                                        <span className="ml-2 text-xs px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full font-medium">
+                                                        <span className="text-xs px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full font-medium flex-shrink-0">
                                                             Following
                                                         </span>
                                                     )}
-                                                </p>
+                                                </div>
                                             </div>
                                             
-                                            <div className="flex gap-2 flex-shrink-0">
+                                            <div className="flex gap-1.5 flex-shrink-0">
                                                 {!isFollowing ? (
                                                     <button
                                                         onClick={async () => {
@@ -635,14 +637,14 @@ export function FriendsPage({ onBack }: FriendsPageProps) {
                                                                 console.error('Error following back:', error)
                                                             }
                                                         }}
-                                                        className="px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white text-sm font-semibold rounded-xl active:scale-95 transition-all duration-200 shadow-md whitespace-nowrap"
+                                                        className="px-2.5 py-1.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white text-xs font-semibold rounded-lg active:scale-95 transition-all duration-200 shadow-md whitespace-nowrap"
                                                     >
                                                         Follow
                                                     </button>
                                                 ) : (
                                                     <button
                                                         onClick={() => handleRemoveFriend(follower.user_id)}
-                                                        className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-semibold rounded-xl active:scale-95 transition-all duration-200 whitespace-nowrap"
+                                                        className="px-2.5 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-semibold rounded-lg active:scale-95 transition-all duration-200 whitespace-nowrap"
                                                 >
                                                         Unfollow
                                                     </button>
@@ -653,7 +655,7 @@ export function FriendsPage({ onBack }: FriendsPageProps) {
                                                         // The follower.id is the request ID from get-followers
                                                         await declineFriendRequest(follower.id)
                                                     }}
-                                                    className="px-4 py-2 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 text-sm font-semibold rounded-xl active:scale-95 transition-all duration-200 whitespace-nowrap"
+                                                    className="px-2.5 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 text-xs font-semibold rounded-lg active:scale-95 transition-all duration-200 whitespace-nowrap"
                                                 >
                                                     Remove
                                                 </button>

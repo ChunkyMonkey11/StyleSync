@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Button } from '@shopify/shop-minis-react'
+import { useAuth } from '../../hooks/useAuth'
 import { useFriendRequests } from '../../hooks/useFriendRequests'
 import { apiRequestJson } from '../../utils/apiClient'
 import { getCardProfile, type CardProfileResponse } from '../../utils/api/card'
@@ -26,6 +27,7 @@ interface ProfilePageProps {
 }
 
 export function ProfilePage({ onBack, onEdit, onDeckGuide }: ProfilePageProps) {
+    const {} = useAuth() // API client handles auth automatically
     const { refreshData } = useFriendRequests()
     const [profile, setProfile] = useState<UserProfile | null>(null)
     const [cardProfile, setCardProfile] = useState<CardProfileResponse | null>(null)
@@ -59,6 +61,12 @@ export function ProfilePage({ onBack, onEdit, onDeckGuide }: ProfilePageProps) {
             setError(null)
             
             const cardData = await getCardProfile()
+            console.log('🎴 Card Profile Response:', {
+                rank: cardData.rank,
+                friends_count: cardData.friends_count,
+                suit: cardData.suit,
+                username: cardData.username
+            })
             setCardProfile(cardData)
             
             // Also fetch regular profile for interests

@@ -1,13 +1,12 @@
 {
   "name": "StyleSync",
+  "description": "A social shopping app that helps you discover and share style with friends",
   "permissions": [],
   "scopes": [
     "user_settings:read",
     "openid",
-    "profile",
     "orders",
     "product_list:read",
-    "product_list:write",
     "products:recent:read",
     "products:recommendations:read",
     "shops:follows:read"

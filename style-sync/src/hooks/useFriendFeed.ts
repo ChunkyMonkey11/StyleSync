@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect } from 'react'
+import { useAuth } from './useAuth'
 import { apiRequestJson } from '../utils/apiClient'
 
 interface FeedProduct {
@@ -38,6 +39,7 @@ interface UseFriendFeedReturn {
  * Hook to fetch a friend's product feed
  */
 export function useFriendFeed(friendShopPublicId: string | null): UseFriendFeedReturn {
+  const {} = useAuth()
   const [products, setProducts] = useState<FeedProduct[]>([])
   const [followedShops, setFollowedShops] = useState<FeedShop[]>([])
   const [isLoading, setIsLoading] = useState(false)
